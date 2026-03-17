@@ -1,7 +1,10 @@
 const SUPABASE_URL = "https://izgdeuonjjznaikcmqkb.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z2RldW9uamp6bmFpa2NtcWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjA3MjYsImV4cCI6MjA4OTMzNjcyNn0.bcj1JdyVeOk_RNmiG0jWZ08JtWpWV3v42ZK2ngaaspc";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
 
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(
+  "https://izgdeuonjjznaikcmqkb.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z2RldW9uamp6bmFpa2NtcWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjA3MjYsImV4cCI6MjA4OTMzNjcyNn0.bcj1JdyVeOk_RNmiG0jWZ08JtWpWV3v42ZK2ngaaspc"
+);
 
 const teams = [
   {
@@ -61,7 +64,8 @@ const voterId = getOrCreateVoterId();
 document.addEventListener("DOMContentLoaded", async () => {
   createStatusBar();
   await loadVotes();
-  renderTeams();
+  renderPage();
+  window.addEventListener("resize", renderPage);
 });
 
 function getOrCreateVoterId() {
@@ -75,31 +79,26 @@ function getOrCreateVoterId() {
 
 function createStatusBar() {
   if (document.getElementById("statusBar")) return;
-
   const bar = document.createElement("div");
   bar.id = "statusBar";
   bar.style.maxWidth = "1400px";
-  bar.style.margin = "0 auto 20px auto";
+  bar.style.margin = "0 auto 16px auto";
   bar.style.padding = "12px 16px";
   bar.style.borderRadius = "12px";
   bar.style.display = "none";
   bar.style.fontWeight = "600";
   bar.style.boxSizing = "border-box";
-
-  const grid = document.getElementById("galleryGrid");
-  document.body.insertBefore(bar, grid);
+  document.body.insertBefore(bar, document.getElementById("galleryGrid"));
 }
 
 function setStatus(message, isError = false) {
   const bar = document.getElementById("statusBar");
   if (!bar) return;
-
   if (!message) {
     bar.style.display = "none";
     bar.textContent = "";
     return;
   }
-
   bar.style.display = "block";
   bar.textContent = message;
   bar.style.color = isError ? "#991b1b" : "#1e3a8a";
@@ -111,20 +110,21 @@ function getCategoryKey(teamId, category) {
   return `${teamId}|||${category}`;
 }
 
+function getAllCategories() {
+  return teams[0].roster.map(player => player.category);
+}
+
+function findPlayer(team, category) {
+  return team.roster.find(player => player.category === category);
+}
+
 async function loadVotes() {
   setStatus("Loading votes...");
-
   try {
-    const overallRes = await supabaseClient
-      .from("overall_votes")
-      .select("team_id");
-
+    const overallRes = await supabaseClient.from("overall_votes").select("team_id");
     if (overallRes.error) throw overallRes.error;
 
-    const categoryRes = await supabaseClient
-      .from("category_votes")
-      .select("team_id, category");
-
+    const categoryRes = await supabaseClient.from("category_votes").select("team_id, category");
     if (categoryRes.error) throw categoryRes.error;
 
     const myOverallRes = await supabaseClient
@@ -132,14 +132,12 @@ async function loadVotes() {
       .select("team_id")
       .eq("voter_id", voterId)
       .maybeSingle();
-
     if (myOverallRes.error) throw myOverallRes.error;
 
     const myCategoryRes = await supabaseClient
       .from("category_votes")
       .select("team_id, category")
       .eq("voter_id", voterId);
-
     if (myCategoryRes.error) throw myCategoryRes.error;
 
     overallVoteCounts = {};
@@ -167,12 +165,21 @@ async function loadVotes() {
   }
 }
 
-function renderTeams() {
-  const container = document.getElementById("galleryGrid");
-  if (!container) {
-    console.error("galleryGrid not found");
-    return;
+function renderPage() {
+  if (window.innerWidth <= 900) {
+    renderMobileComparison();
+  } else {
+    renderDesktopTeams();
   }
+}
+
+function renderDesktopTeams() {
+  const container = document.getElementById("galleryGrid");
+  container.innerHTML = "";
+  container.style.display = "grid";
+  container.style.gridTemplateColumns = "repeat(3, 1fr)";
+  container.style.gap = "26px";
+  container.style.alignItems = "start";
 
   const sortedTeams = [...teams].sort((a, b) => {
     const aVotes = overallVoteCounts[a.id] || 0;
@@ -180,207 +187,374 @@ function renderTeams() {
     return bVotes - aVotes;
   });
 
-  container.innerHTML = "";
-  container.style.display = "grid";
-  container.style.gridTemplateColumns = "repeat(auto-fit, minmax(320px, 1fr))";
-  container.style.gap = "26px";
-  container.style.alignItems = "start";
-
   sortedTeams.forEach(team => {
-    const isMyOverallTeam = myOverallVoteTeamId === team.id;
+    container.appendChild(buildTeamColumn(team));
+  });
+}
 
-    const teamDiv = document.createElement("div");
-    teamDiv.style.background = isMyOverallTeam ? "#eff6ff" : "#ffffff";
-    teamDiv.style.border = isMyOverallTeam
-      ? "2px solid #2563eb"
-      : "1px solid rgba(219, 227, 239, 0.7)";
-    teamDiv.style.borderRadius = "28px";
-    teamDiv.style.padding = "24px";
-    teamDiv.style.boxShadow = isMyOverallTeam
-      ? "0 20px 50px rgba(37, 99, 235, 0.16)"
-      : "0 20px 50px rgba(20, 32, 51, 0.10)";
-    teamDiv.style.boxSizing = "border-box";
+function renderMobileComparison() {
+  const container = document.getElementById("galleryGrid");
+  container.innerHTML = "";
+  container.style.display = "block";
 
-    const title = document.createElement("h2");
-    title.textContent = team.name;
-    title.style.margin = "0 0 8px";
-    title.style.fontSize = "2rem";
+  getAllCategories().forEach(category => {
+    const section = document.createElement("section");
+    section.style.marginBottom = "28px";
 
-    const subtitle = document.createElement("p");
-    subtitle.textContent = isMyOverallTeam
-      ? "Your Best Overall vote is on this team."
-      : "Anonymous celebrity draft roster.";
-    subtitle.style.margin = "0 0 14px";
-    subtitle.style.color = isMyOverallTeam ? "#1d4ed8" : "#5f6f86";
-    subtitle.style.fontWeight = isMyOverallTeam ? "700" : "400";
+    const heading = document.createElement("h2");
+    heading.textContent = category;
+    heading.style.margin = "0 0 12px";
+    heading.style.fontSize = "1.2rem";
+    heading.style.color = "#0f172a";
 
-    const voteStats = document.createElement("div");
-    voteStats.style.display = "flex";
-    voteStats.style.gap = "16px";
-    voteStats.style.flexWrap = "wrap";
-    voteStats.style.margin = "0 0 20px";
-    voteStats.style.fontSize = "14px";
-    voteStats.style.color = "#334155";
-    voteStats.innerHTML = `
-      <div><strong>Best Overall Votes:</strong> ${overallVoteCounts[team.id] || 0}</div>
-    `;
+    const row = document.createElement("div");
+    row.style.display = "grid";
+    row.style.gridTemplateColumns = "1fr";
+    row.style.gap = "14px";
 
-    teamDiv.appendChild(title);
-    teamDiv.appendChild(subtitle);
-    teamDiv.appendChild(voteStats);
-
-    team.roster.forEach(player => {
-      const key = getCategoryKey(team.id, player.category);
-      const categoryCount = categoryVoteCounts[key] || 0;
-      const myVoteForThisCategory = myCategoryVotes[player.category] || null;
-      const iVotedThisCard = myVoteForThisCategory === team.id;
-      const categoryLockedElsewhere = myVoteForThisCategory && myVoteForThisCategory !== team.id;
-
-      const card = document.createElement("div");
-      card.style.border = iVotedThisCard ? "2px solid #2563eb" : "1px solid #e2e8f0";
-      card.style.borderRadius = "16px";
-      card.style.overflow = "hidden";
-      card.style.marginBottom = "16px";
-      card.style.background = iVotedThisCard ? "#eff6ff" : "#fff";
-      card.style.boxShadow = iVotedThisCard ? "0 8px 24px rgba(37, 99, 235, 0.10)" : "none";
-
-      const header = document.createElement("div");
-      header.textContent = player.category;
-      header.style.background = "#0f172a";
-      header.style.color = "white";
-      header.style.fontSize = "13px";
-      header.style.fontWeight = "700";
-      header.style.textTransform = "uppercase";
-      header.style.padding = "10px 14px";
-
-      const img = document.createElement("img");
-      img.src = player.image;
-      img.alt = player.celeb;
-      img.style.width = "100%";
-      img.style.aspectRatio = "3 / 4";
-      img.style.height = "auto";
-      img.style.objectFit = "cover";
-      img.style.objectPosition = "top";
-      img.style.display = "block";
-
-      const info = document.createElement("div");
-      info.style.padding = "12px";
-
-      const name = document.createElement("div");
-      name.textContent = player.celeb;
-      name.style.fontWeight = "700";
-
-      const year = document.createElement("div");
-      year.textContent = `Peak year: ${player.year}`;
-      year.style.color = "#475569";
-      year.style.marginTop = "4px";
-
-      const categoryCountDiv = document.createElement("div");
-      categoryCountDiv.textContent = `Category Votes: ${categoryCount}`;
-      categoryCountDiv.style.marginTop = "10px";
-      categoryCountDiv.style.fontSize = "14px";
-      categoryCountDiv.style.color = "#334155";
-
-      const myVoteLabel = document.createElement("div");
-      myVoteLabel.style.marginTop = "8px";
-      myVoteLabel.style.fontSize = "13px";
-      myVoteLabel.style.fontWeight = "700";
-
-      if (iVotedThisCard) {
-        myVoteLabel.textContent = "You voted for this category here.";
-        myVoteLabel.style.color = "#1d4ed8";
-      } else if (categoryLockedElsewhere) {
-        myVoteLabel.textContent = "You already voted in this category on another team.";
-        myVoteLabel.style.color = "#7c2d12";
-      } else {
-        myVoteLabel.textContent = "";
-      }
-
-      const categoryButton = document.createElement("button");
-      if (iVotedThisCard) {
-        categoryButton.textContent = "Voted";
-        categoryButton.disabled = true;
-        categoryButton.style.background = "#2563eb";
-      } else if (categoryLockedElsewhere) {
-        categoryButton.textContent = "Already Voted in Category";
-        categoryButton.disabled = true;
-        categoryButton.style.background = "#94a3b8";
-      } else {
-        categoryButton.textContent = `Vote ${player.category}`;
-        categoryButton.disabled = false;
-        categoryButton.style.background = "#475569";
-      }
-
-      categoryButton.style.width = "100%";
-      categoryButton.style.padding = "10px";
-      categoryButton.style.marginTop = "10px";
-      categoryButton.style.border = "none";
-      categoryButton.style.borderRadius = "10px";
-      categoryButton.style.color = "white";
-      categoryButton.style.cursor = categoryButton.disabled ? "not-allowed" : "pointer";
-      categoryButton.style.fontWeight = "600";
-      categoryButton.style.opacity = categoryButton.disabled ? "0.9" : "1";
-
-      if (!categoryButton.disabled) {
-        categoryButton.addEventListener("click", () => voteCategory(team.id, player.category, categoryButton));
-      }
-
-      info.appendChild(name);
-      info.appendChild(year);
-      info.appendChild(categoryCountDiv);
-      info.appendChild(myVoteLabel);
-      info.appendChild(categoryButton);
-
-      card.appendChild(header);
-      card.appendChild(img);
-      card.appendChild(info);
-
-      teamDiv.appendChild(card);
+    teams.forEach(team => {
+      const player = findPlayer(team, category);
+      row.appendChild(buildMobileCategoryCard(team, player));
     });
 
-    const overallButton = document.createElement("button");
-    if (isMyOverallTeam) {
-      overallButton.textContent = "Your Best Overall Pick";
-      overallButton.disabled = true;
-      overallButton.style.background = "#2563eb";
-    } else if (myOverallVoteTeamId) {
-      overallButton.textContent = "Best Overall Vote Already Used";
-      overallButton.disabled = true;
-      overallButton.style.background = "#94a3b8";
-    } else {
-      overallButton.textContent = "Vote Best Overall";
-      overallButton.disabled = false;
-      overallButton.style.background = "#0f172a";
-    }
-
-    overallButton.style.width = "100%";
-    overallButton.style.padding = "12px";
-    overallButton.style.marginTop = "10px";
-    overallButton.style.border = "none";
-    overallButton.style.borderRadius = "12px";
-    overallButton.style.color = "white";
-    overallButton.style.cursor = overallButton.disabled ? "not-allowed" : "pointer";
-    overallButton.style.fontWeight = "700";
-    overallButton.style.opacity = overallButton.disabled ? "0.9" : "1";
-
-    if (!overallButton.disabled) {
-      overallButton.addEventListener("click", () => voteOverall(team.id, overallButton));
-    }
-
-    teamDiv.appendChild(overallButton);
-    container.appendChild(teamDiv);
+    section.appendChild(heading);
+    section.appendChild(row);
+    container.appendChild(section);
   });
+
+  const overallSection = document.createElement("section");
+  overallSection.style.marginTop = "36px";
+
+  const overallHeading = document.createElement("h2");
+  overallHeading.textContent = "Best Overall";
+  overallHeading.style.margin = "0 0 12px";
+  overallHeading.style.fontSize = "1.2rem";
+  overallHeading.style.color = "#0f172a";
+
+  const overallGrid = document.createElement("div");
+  overallGrid.style.display = "grid";
+  overallGrid.style.gridTemplateColumns = "1fr";
+  overallGrid.style.gap = "14px";
+
+  const sortedTeams = [...teams].sort((a, b) => (overallVoteCounts[b.id] || 0) - (overallVoteCounts[a.id] || 0));
+  sortedTeams.forEach(team => {
+    overallGrid.appendChild(buildOverallOnlyCard(team));
+  });
+
+  overallSection.appendChild(overallHeading);
+  overallSection.appendChild(overallGrid);
+  container.appendChild(overallSection);
+}
+
+function buildTeamColumn(team) {
+  const isMyOverallTeam = myOverallVoteTeamId === team.id;
+
+  const teamDiv = document.createElement("div");
+  teamDiv.style.background = isMyOverallTeam ? "#eff6ff" : "#ffffff";
+  teamDiv.style.border = isMyOverallTeam ? "2px solid #2563eb" : "1px solid rgba(219, 227, 239, 0.7)";
+  teamDiv.style.borderRadius = "28px";
+  teamDiv.style.padding = "24px";
+  teamDiv.style.boxShadow = isMyOverallTeam ? "0 20px 50px rgba(37, 99, 235, 0.16)" : "0 20px 50px rgba(20, 32, 51, 0.10)";
+  teamDiv.style.boxSizing = "border-box";
+
+  const title = document.createElement("h2");
+  title.textContent = team.name;
+  title.style.margin = "0 0 8px";
+  title.style.fontSize = "2rem";
+
+  const subtitle = document.createElement("p");
+  subtitle.textContent = isMyOverallTeam ? "Your Best Overall vote is on this team." : "Anonymous celebrity draft roster.";
+  subtitle.style.margin = "0 0 14px";
+  subtitle.style.color = isMyOverallTeam ? "#1d4ed8" : "#5f6f86";
+  subtitle.style.fontWeight = isMyOverallTeam ? "700" : "400";
+
+  const voteStats = document.createElement("div");
+  voteStats.style.margin = "0 0 20px";
+  voteStats.style.fontSize = "14px";
+  voteStats.style.color = "#334155";
+  voteStats.innerHTML = `<div><strong>Best Overall Votes:</strong> ${overallVoteCounts[team.id] || 0}</div>`;
+
+  teamDiv.appendChild(title);
+  teamDiv.appendChild(subtitle);
+  teamDiv.appendChild(voteStats);
+
+  team.roster.forEach(player => {
+    teamDiv.appendChild(buildPlayerCard(team, player));
+  });
+
+  teamDiv.appendChild(buildOverallButton(team));
+  return teamDiv;
+}
+
+function buildPlayerCard(team, player) {
+  const key = getCategoryKey(team.id, player.category);
+  const categoryCount = categoryVoteCounts[key] || 0;
+  const myVoteForThisCategory = myCategoryVotes[player.category] || null;
+  const iVotedThisCard = myVoteForThisCategory === team.id;
+  const categoryLockedElsewhere = myVoteForThisCategory && myVoteForThisCategory !== team.id;
+
+  const card = document.createElement("div");
+  card.style.border = iVotedThisCard ? "2px solid #2563eb" : "1px solid #e2e8f0";
+  card.style.borderRadius = "16px";
+  card.style.overflow = "hidden";
+  card.style.marginBottom = "16px";
+  card.style.background = iVotedThisCard ? "#eff6ff" : "#fff";
+
+  const header = document.createElement("div");
+  header.textContent = player.category;
+  header.style.background = "#0f172a";
+  header.style.color = "white";
+  header.style.fontSize = "13px";
+  header.style.fontWeight = "700";
+  header.style.textTransform = "uppercase";
+  header.style.padding = "10px 14px";
+
+  const img = document.createElement("img");
+  img.src = player.image;
+  img.alt = player.celeb;
+  img.style.width = "100%";
+  img.style.aspectRatio = "3 / 4";
+  img.style.objectFit = "cover";
+  img.style.objectPosition = "top";
+  img.style.display = "block";
+
+  const info = document.createElement("div");
+  info.style.padding = "12px";
+
+  const name = document.createElement("div");
+  name.textContent = player.celeb;
+  name.style.fontWeight = "700";
+
+  const year = document.createElement("div");
+  year.textContent = `Peak year: ${player.year}`;
+  year.style.color = "#475569";
+  year.style.marginTop = "4px";
+
+  const countDiv = document.createElement("div");
+  countDiv.textContent = `Category Votes: ${categoryCount}`;
+  countDiv.style.marginTop = "10px";
+  countDiv.style.fontSize = "14px";
+  countDiv.style.color = "#334155";
+
+  const label = document.createElement("div");
+  label.style.marginTop = "8px";
+  label.style.fontSize = "13px";
+  label.style.fontWeight = "700";
+  if (iVotedThisCard) {
+    label.textContent = "You voted for this category here.";
+    label.style.color = "#1d4ed8";
+  } else if (categoryLockedElsewhere) {
+    label.textContent = "You already voted in this category on another team.";
+    label.style.color = "#7c2d12";
+  }
+
+  const button = document.createElement("button");
+  if (iVotedThisCard) {
+    button.textContent = "Voted";
+    button.disabled = true;
+    button.style.background = "#2563eb";
+  } else if (categoryLockedElsewhere) {
+    button.textContent = "Already Voted in Category";
+    button.disabled = true;
+    button.style.background = "#94a3b8";
+  } else {
+    button.textContent = `Vote ${player.category}`;
+    button.style.background = "#475569";
+    button.addEventListener("click", () => voteCategory(team.id, player.category, button));
+  }
+
+  button.style.width = "100%";
+  button.style.padding = "10px";
+  button.style.marginTop = "10px";
+  button.style.border = "none";
+  button.style.borderRadius = "10px";
+  button.style.color = "white";
+  button.style.cursor = button.disabled ? "not-allowed" : "pointer";
+  button.style.fontWeight = "600";
+
+  info.appendChild(name);
+  info.appendChild(year);
+  info.appendChild(countDiv);
+  info.appendChild(label);
+  info.appendChild(button);
+
+  card.appendChild(header);
+  card.appendChild(img);
+  card.appendChild(info);
+
+  return card;
+}
+
+function buildMobileCategoryCard(team, player) {
+  const key = getCategoryKey(team.id, player.category);
+  const categoryCount = categoryVoteCounts[key] || 0;
+  const myVoteForThisCategory = myCategoryVotes[player.category] || null;
+  const iVotedThisCard = myVoteForThisCategory === team.id;
+  const categoryLockedElsewhere = myVoteForThisCategory && myVoteForThisCategory !== team.id;
+
+  const card = document.createElement("div");
+  card.style.background = iVotedThisCard ? "#eff6ff" : "#fff";
+  card.style.border = iVotedThisCard ? "2px solid #2563eb" : "1px solid #e2e8f0";
+  card.style.borderRadius = "18px";
+  card.style.padding = "12px";
+  card.style.boxShadow = "0 10px 24px rgba(20,32,51,0.08)";
+
+  const teamLabel = document.createElement("div");
+  teamLabel.textContent = team.name;
+  teamLabel.style.fontWeight = "700";
+  teamLabel.style.marginBottom = "10px";
+  teamLabel.style.color = "#0f172a";
+
+  const row = document.createElement("div");
+  row.style.display = "grid";
+  row.style.gridTemplateColumns = "92px 1fr";
+  row.style.gap = "12px";
+  row.style.alignItems = "start";
+
+  const img = document.createElement("img");
+  img.src = player.image;
+  img.alt = player.celeb;
+  img.style.width = "92px";
+  img.style.height = "120px";
+  img.style.objectFit = "cover";
+  img.style.objectPosition = "top";
+  img.style.borderRadius = "12px";
+  img.style.display = "block";
+
+  const content = document.createElement("div");
+
+  const name = document.createElement("div");
+  name.textContent = player.celeb;
+  name.style.fontWeight = "700";
+
+  const year = document.createElement("div");
+  year.textContent = `Peak year: ${player.year}`;
+  year.style.color = "#475569";
+  year.style.marginTop = "4px";
+  year.style.fontSize = "14px";
+
+  const count = document.createElement("div");
+  count.textContent = `Votes: ${categoryCount}`;
+  count.style.marginTop = "8px";
+  count.style.fontSize = "14px";
+  count.style.color = "#334155";
+
+  const note = document.createElement("div");
+  note.style.marginTop = "8px";
+  note.style.fontSize = "12px";
+  note.style.fontWeight = "700";
+  if (iVotedThisCard) {
+    note.textContent = "Your vote";
+    note.style.color = "#1d4ed8";
+  } else if (categoryLockedElsewhere) {
+    note.textContent = "Already voted elsewhere";
+    note.style.color = "#7c2d12";
+  }
+
+  const button = document.createElement("button");
+  if (iVotedThisCard) {
+    button.textContent = "Voted";
+    button.disabled = true;
+    button.style.background = "#2563eb";
+  } else if (categoryLockedElsewhere) {
+    button.textContent = "Already Voted";
+    button.disabled = true;
+    button.style.background = "#94a3b8";
+  } else {
+    button.textContent = "Vote";
+    button.style.background = "#475569";
+    button.addEventListener("click", () => voteCategory(team.id, player.category, button));
+  }
+
+  button.style.width = "100%";
+  button.style.padding = "10px";
+  button.style.marginTop = "10px";
+  button.style.border = "none";
+  button.style.borderRadius = "10px";
+  button.style.color = "white";
+  button.style.fontWeight = "600";
+  button.style.cursor = button.disabled ? "not-allowed" : "pointer";
+
+  content.appendChild(name);
+  content.appendChild(year);
+  content.appendChild(count);
+  content.appendChild(note);
+  content.appendChild(button);
+
+  row.appendChild(img);
+  row.appendChild(content);
+
+  card.appendChild(teamLabel);
+  card.appendChild(row);
+
+  return card;
+}
+
+function buildOverallOnlyCard(team) {
+  const isMyOverallTeam = myOverallVoteTeamId === team.id;
+
+  const card = document.createElement("div");
+  card.style.background = isMyOverallTeam ? "#eff6ff" : "#fff";
+  card.style.border = isMyOverallTeam ? "2px solid #2563eb" : "1px solid #e2e8f0";
+  card.style.borderRadius = "18px";
+  card.style.padding = "16px";
+  card.style.boxShadow = "0 10px 24px rgba(20,32,51,0.08)";
+
+  const title = document.createElement("div");
+  title.textContent = team.name;
+  title.style.fontWeight = "700";
+  title.style.fontSize = "1.1rem";
+
+  const count = document.createElement("div");
+  count.textContent = `Best Overall Votes: ${overallVoteCounts[team.id] || 0}`;
+  count.style.marginTop = "8px";
+  count.style.color = "#334155";
+
+  card.appendChild(title);
+  card.appendChild(count);
+  card.appendChild(buildOverallButton(team));
+
+  return card;
+}
+
+function buildOverallButton(team) {
+  const isMyOverallTeam = myOverallVoteTeamId === team.id;
+  const button = document.createElement("button");
+
+  if (isMyOverallTeam) {
+    button.textContent = "Your Best Overall Pick";
+    button.disabled = true;
+    button.style.background = "#2563eb";
+  } else if (myOverallVoteTeamId) {
+    button.textContent = "Best Overall Vote Already Used";
+    button.disabled = true;
+    button.style.background = "#94a3b8";
+  } else {
+    button.textContent = "Vote Best Overall";
+    button.style.background = "#0f172a";
+    button.addEventListener("click", () => voteOverall(team.id, button));
+  }
+
+  button.style.width = "100%";
+  button.style.padding = "12px";
+  button.style.marginTop = "12px";
+  button.style.border = "none";
+  button.style.borderRadius = "12px";
+  button.style.color = "white";
+  button.style.fontWeight = "700";
+  button.style.cursor = button.disabled ? "not-allowed" : "pointer";
+
+  return button;
 }
 
 async function voteCategory(teamId, category, button) {
   const originalText = button.textContent;
   button.disabled = true;
   button.textContent = "Submitting...";
-
   try {
     if (myCategoryVotes[category]) {
       setStatus("You already voted in that category.", true);
-      renderTeams();
+      renderPage();
       return;
     }
 
@@ -394,7 +568,7 @@ async function voteCategory(teamId, category, button) {
     categoryVoteCounts[key] = (categoryVoteCounts[key] || 0) + 1;
     myCategoryVotes[category] = teamId;
 
-    renderTeams();
+    renderPage();
     setStatus(`Vote submitted for ${category}.`);
   } catch (error) {
     console.error("Category vote failed:", error);
@@ -408,11 +582,10 @@ async function voteOverall(teamId, button) {
   const originalText = button.textContent;
   button.disabled = true;
   button.textContent = "Submitting...";
-
   try {
     if (myOverallVoteTeamId) {
       setStatus("You already used your Best Overall vote.", true);
-      renderTeams();
+      renderPage();
       return;
     }
 
@@ -425,7 +598,7 @@ async function voteOverall(teamId, button) {
     overallVoteCounts[teamId] = (overallVoteCounts[teamId] || 0) + 1;
     myOverallVoteTeamId = teamId;
 
-    renderTeams();
+    renderPage();
     setStatus("Best Overall vote submitted.");
   } catch (error) {
     console.error("Overall vote failed:", error);
