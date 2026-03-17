@@ -139,3 +139,8 @@ function renderTeams() {
 }
 
 renderTeams();
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderTeams();
+  loadVoteCounts(); // if you added this earlier
+});
