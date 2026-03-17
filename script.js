@@ -51,9 +51,11 @@ const teams = [
   }
 ];
 
-let teamVoteCounts = {};
 let overallVoteCounts = {};
 let categoryVoteCounts = {};
+let myCategoryVotes = {}; // key: category => teamId
+let myOverallVoteTeamId = null;
+
 const voterId = getOrCreateVoterId();
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -113,22 +115,29 @@ async function loadVotes() {
   setStatus("Loading votes...");
 
   try {
-    const teamRes = await supabaseClient.from("team_votes").select("team_id");
-    if (teamRes.error) throw teamRes.error;
-
     const overallRes = await supabaseClient.from("overall_votes").select("team_id");
     if (overallRes.error) throw overallRes.error;
 
     const categoryRes = await supabaseClient.from("category_votes").select("team_id, category");
     if (categoryRes.error) throw categoryRes.error;
 
-    teamVoteCounts = {};
+    const myOverallRes = await supabaseClient
+      .from("overall_votes")
+      .select("team_id")
+      .eq("voter_id", voterId)
+      .maybeSingle();
+    if (myOverallRes.error) throw myOverallRes.error;
+
+    const myCategoryRes = await supabaseClient
+      .from("category_votes")
+      .select("team_id, category")
+      .eq("voter_id", voterId);
+    if (myCategoryRes.error) throw myCategoryRes.error;
+
     overallVoteCounts = {};
     categoryVoteCounts = {};
-
-    for (const row of teamRes.data || []) {
-      teamVoteCounts[row.team_id] = (teamVoteCounts[row.team_id] || 0) + 1;
-    }
+    myCategoryVotes = {};
+    myOverallVoteTeamId = myOverallRes.data ? myOverallRes.data.team_id : null;
 
     for (const row of overallRes.data || []) {
       overallVoteCounts[row.team_id] = (overallVoteCounts[row.team_id] || 0) + 1;
@@ -137,6 +146,10 @@ async function loadVotes() {
     for (const row of categoryRes.data || []) {
       const key = getCategoryKey(row.team_id, row.category);
       categoryVoteCounts[key] = (categoryVoteCounts[key] || 0) + 1;
+    }
+
+    for (const row of myCategoryRes.data || []) {
+      myCategoryVotes[row.category] = row.team_id;
     }
 
     setStatus("");
@@ -154,8 +167,8 @@ function renderTeams() {
   }
 
   const sortedTeams = [...teams].sort((a, b) => {
-    const aVotes = teamVoteCounts[a.id] || 0;
-    const bVotes = teamVoteCounts[b.id] || 0;
+    const aVotes = overallVoteCounts[a.id] || 0;
+    const bVotes = overallVoteCounts[b.id] || 0;
     return bVotes - aVotes;
   });
 
@@ -166,12 +179,18 @@ function renderTeams() {
   container.style.alignItems = "start";
 
   sortedTeams.forEach(team => {
+    const isMyOverallTeam = myOverallVoteTeamId === team.id;
+
     const teamDiv = document.createElement("div");
-    teamDiv.style.background = "#ffffff";
-    teamDiv.style.border = "1px solid rgba(219, 227, 239, 0.7)";
+    teamDiv.style.background = isMyOverallTeam ? "#eff6ff" : "#ffffff";
+    teamDiv.style.border = isMyOverallTeam
+      ? "2px solid #2563eb"
+      : "1px solid rgba(219, 227, 239, 0.7)";
     teamDiv.style.borderRadius = "28px";
     teamDiv.style.padding = "24px";
-    teamDiv.style.boxShadow = "0 20px 50px rgba(20, 32, 51, 0.10)";
+    teamDiv.style.boxShadow = isMyOverallTeam
+      ? "0 20px 50px rgba(37, 99, 235, 0.16)"
+      : "0 20px 50px rgba(20, 32, 51, 0.10)";
     teamDiv.style.boxSizing = "border-box";
 
     const title = document.createElement("h2");
@@ -180,9 +199,12 @@ function renderTeams() {
     title.style.fontSize = "2rem";
 
     const subtitle = document.createElement("p");
-    subtitle.textContent = "Anonymous celebrity draft roster.";
+    subtitle.textContent = isMyOverallTeam
+      ? "Your Best Overall vote is on this team."
+      : "Anonymous celebrity draft roster.";
     subtitle.style.margin = "0 0 14px";
-    subtitle.style.color = "#5f6f86";
+    subtitle.style.color = isMyOverallTeam ? "#1d4ed8" : "#5f6f86";
+    subtitle.style.fontWeight = isMyOverallTeam ? "700" : "400";
 
     const voteStats = document.createElement("div");
     voteStats.style.display = "flex";
@@ -192,8 +214,7 @@ function renderTeams() {
     voteStats.style.fontSize = "14px";
     voteStats.style.color = "#334155";
     voteStats.innerHTML = `
-      <div><strong>Team Votes:</strong> ${teamVoteCounts[team.id] || 0}</div>
-      <div><strong>Best Overall:</strong> ${overallVoteCounts[team.id] || 0}</div>
+      <div><strong>Best Overall Votes:</strong> ${overallVoteCounts[team.id] || 0}</div>
     `;
 
     teamDiv.appendChild(title);
@@ -201,12 +222,19 @@ function renderTeams() {
     teamDiv.appendChild(voteStats);
 
     team.roster.forEach(player => {
+      const key = getCategoryKey(team.id, player.category);
+      const categoryCount = categoryVoteCounts[key] || 0;
+      const myVoteForThisCategory = myCategoryVotes[player.category] || null;
+      const iVotedThisCard = myVoteForThisCategory === team.id;
+      const categoryLockedElsewhere = myVoteForThisCategory && myVoteForThisCategory !== team.id;
+
       const card = document.createElement("div");
-      card.style.border = "1px solid #e2e8f0";
+      card.style.border = iVotedThisCard ? "2px solid #2563eb" : "1px solid #e2e8f0";
       card.style.borderRadius = "16px";
       card.style.overflow = "hidden";
       card.style.marginBottom = "16px";
-      card.style.background = "#fff";
+      card.style.background = iVotedThisCard ? "#eff6ff" : "#fff";
+      card.style.boxShadow = iVotedThisCard ? "0 8px 24px rgba(37, 99, 235, 0.10)" : "none";
 
       const header = document.createElement("div");
       header.textContent = player.category;
@@ -239,32 +267,60 @@ function renderTeams() {
       year.style.color = "#475569";
       year.style.marginTop = "4px";
 
-      info.appendChild(name);
-      info.appendChild(year);
-
-      const categoryKey = getCategoryKey(team.id, player.category);
-      const categoryCount = categoryVoteCounts[categoryKey] || 0;
-
       const categoryCountDiv = document.createElement("div");
       categoryCountDiv.textContent = `Category Votes: ${categoryCount}`;
       categoryCountDiv.style.marginTop = "10px";
       categoryCountDiv.style.fontSize = "14px";
       categoryCountDiv.style.color = "#334155";
 
+      const myVoteLabel = document.createElement("div");
+      myVoteLabel.style.marginTop = "8px";
+      myVoteLabel.style.fontSize = "13px";
+      myVoteLabel.style.fontWeight = "700";
+
+      if (iVotedThisCard) {
+        myVoteLabel.textContent = "You voted for this category here.";
+        myVoteLabel.style.color = "#1d4ed8";
+      } else if (categoryLockedElsewhere) {
+        myVoteLabel.textContent = "You already voted in this category on another team.";
+        myVoteLabel.style.color = "#7c2d12";
+      } else {
+        myVoteLabel.textContent = "";
+      }
+
       const categoryButton = document.createElement("button");
-      categoryButton.textContent = `Vote ${player.category}`;
+      if (iVotedThisCard) {
+        categoryButton.textContent = "Voted";
+        categoryButton.disabled = true;
+        categoryButton.style.background = "#2563eb";
+      } else if (categoryLockedElsewhere) {
+        categoryButton.textContent = "Already Voted in Category";
+        categoryButton.disabled = true;
+        categoryButton.style.background = "#94a3b8";
+      } else {
+        categoryButton.textContent = `Vote ${player.category}`;
+        categoryButton.disabled = false;
+        categoryButton.style.background = "#475569";
+      }
+
       categoryButton.style.width = "100%";
       categoryButton.style.padding = "10px";
       categoryButton.style.marginTop = "10px";
       categoryButton.style.border = "none";
       categoryButton.style.borderRadius = "10px";
-      categoryButton.style.background = "#475569";
       categoryButton.style.color = "white";
-      categoryButton.style.cursor = "pointer";
+      categoryButton.style.cursor = categoryButton.disabled ? "not-allowed" : "pointer";
       categoryButton.style.fontWeight = "600";
-      categoryButton.addEventListener("click", () => voteCategory(team.id, player.category, categoryButton));
+      categoryButton.style.opacity = categoryButton.disabled ? "0.9" : "1";
 
+      if (!categoryButton.disabled) {
+        categoryButton.addEventListener("click", () => voteCategory(team.id, player.category, categoryButton));
+      }
+
+      info.appendChild(name);
+      info.appendChild(year);
       info.appendChild(categoryCountDiv);
+      info.appendChild(myVoteLabel);
       info.appendChild(categoryButton);
 
       card.appendChild(header);
@@ -275,21 +331,35 @@ function renderTeams() {
     });
 
     const overallButton = document.createElement("button");
-    overallButton.textContent = "Vote Best Overall";
+    if (isMyOverallTeam) {
+      overallButton.textContent = "Your Best Overall Pick";
+      overallButton.disabled = true;
+      overallButton.style.background = "#2563eb";
+    } else if (myOverallVoteTeamId) {
+      overallButton.textContent = "Best Overall Vote Already Used";
+      overallButton.disabled = true;
+      overallButton.style.background = "#94a3b8";
+    } else {
+      overallButton.textContent = "Vote Best Overall";
+      overallButton.disabled = false;
+      overallButton.style.background = "#0f172a";
+    }
+
     overallButton.style.width = "100%";
     overallButton.style.padding = "12px";
     overallButton.style.marginTop = "10px";
     overallButton.style.border = "none";
     overallButton.style.borderRadius = "12px";
-    overallButton.style.background = "#0f172a";
     overallButton.style.color = "white";
-    overallButton.style.cursor = "pointer";
+    overallButton.style.cursor = overallButton.disabled ? "not-allowed" : "pointer";
     overallButton.style.fontWeight = "700";
-    overallButton.addEventListener("click", () => voteOverall(team.id, overallButton));
+    overallButton.style.opacity = overallButton.disabled ? "0.9" : "1";
 
-    teamDiv.appendChild(voteButton);
+    if (!overallButton.disabled) {
+      overallButton.addEventListener("click", () => voteOverall(team.id, overallButton));
+    }
+
     teamDiv.appendChild(overallButton);
-
     container.appendChild(teamDiv);
   });
 }
@@ -300,6 +370,13 @@ async function voteCategory(teamId, category, button) {
   button.textContent = "Submitting...";
 
   try {
+    const existingCategoryVote = myCategoryVotes[category];
+    if (existingCategoryVote) {
+      setStatus("You already voted in that category.", true);
+      renderTeams();
+      return;
+    }
+
     const { error } = await supabaseClient
       .from("category_votes")
       .insert([{ team_id: teamId, category: category, voter_id: voterId }]);
@@ -308,6 +385,8 @@ async function voteCategory(teamId, category, button) {
 
     const key = getCategoryKey(teamId, category);
     categoryVoteCounts[key] = (categoryVoteCounts[key] || 0) + 1;
+    myCategoryVotes[category] = teamId;
+
     renderTeams();
     setStatus(`Vote submitted for ${category}.`);
   } catch (error) {
@@ -324,18 +403,9 @@ async function voteOverall(teamId, button) {
   button.textContent = "Submitting...";
 
   try {
-    const { data: existingVote, error: checkError } = await supabaseClient
-      .from("overall_votes")
-      .select("team_id")
-      .eq("voter_id", voterId)
-      .maybeSingle();
-
-    if (checkError) throw checkError;
-
-    if (existingVote) {
+    if (myOverallVoteTeamId) {
       setStatus("You already used your Best Overall vote.", true);
-      button.disabled = false;
-      button.textContent = originalText;
+      renderTeams();
       return;
     }
 
@@ -346,6 +416,8 @@ async function voteOverall(teamId, button) {
     if (insertError) throw insertError;
 
     overallVoteCounts[teamId] = (overallVoteCounts[teamId] || 0) + 1;
+    myOverallVoteTeamId = teamId;
+
     renderTeams();
     setStatus("Best Overall vote submitted.");
   } catch (error) {
