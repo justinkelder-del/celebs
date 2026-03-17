@@ -67,6 +67,15 @@
       color: #475569;
       margin-bottom: 28px;
     }
+    .error-banner {
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      color: #9f1239;
+      border-radius: 18px;
+      padding: 16px 18px;
+      margin-bottom: 28px;
+      display: none;
+    }
     #leaderboard,
     #galleryGrid,
     #resultsMode {
@@ -250,8 +259,8 @@
   </style>
 </head>
 <body>
-  <h1>Vote for the best overall team</h1>
-  <p class="subtitle">Vote by category and overall team. Scores update live for everyone.</p>
+  <h1>Choose your favorite gallery</h1>
+  <p class="subtitle">Vote by category and overall team — updates live.</p>
 
   <div class="topbar">
     <div class="pill" id="overallTotalPill">0 overall votes</div>
@@ -268,6 +277,8 @@
   <div class="notice">
     One overall vote per browser and one vote per category per browser. Results update live across all visitors.
   </div>
+
+  <div class="error-banner" id="errorBanner"></div>
 
   <div id="leaderboard"></div>
   <div id="galleryGrid"></div>
@@ -346,6 +357,7 @@
     const overallWinnerBanner = document.getElementById("overallWinnerBanner");
     const resultsOverallGrid = document.getElementById("resultsOverallGrid");
     const categoryResultsGrid = document.getElementById("categoryResultsGrid");
+    const errorBanner = document.getElementById("errorBanner");
 
     const showVotingBtn = document.getElementById("showVotingBtn");
     const showResultsBtn = document.getElementById("showResultsBtn");
@@ -356,6 +368,16 @@
     let categoryCounts = blankCategoryCounts();
     let myOverallVote = null;
     let myCategoryVotes = {};
+
+    function showError(message) {
+      errorBanner.style.display = "block";
+      errorBanner.textContent = message;
+    }
+
+    function clearError() {
+      errorBanner.style.display = "none";
+      errorBanner.textContent = "";
+    }
 
     function blankTeamCounts() {
       return { "team-1": 0, "team-2": 0, "team-3": 0 };
@@ -401,11 +423,15 @@
         .from("site_settings")
         .select("reveal_results")
         .eq("id", 1)
-        .single();
+        .maybeSingle();
 
-      if (!error && data) {
-        revealResults = !!data.reveal_results;
+      if (error) {
+        console.error(error);
+        showError("Could not load site settings. Check that the site_settings table exists.");
+        return;
       }
+
+      revealResults = !!(data && data.reveal_results);
     }
 
     async function toggleRevealResults() {
@@ -415,12 +441,13 @@
         .eq("id", 1);
 
       if (error) {
-        alert("Could not update results mode.");
         console.error(error);
+        showError("Could not update results reveal. Check the site_settings table and policies.");
       }
     }
 
     async function loadVotes() {
+      clearError();
       overallCounts = blankTeamCounts();
       categoryCounts = blankCategoryCounts();
       myOverallVote = null;
@@ -434,8 +461,9 @@
 
       if (overallError) {
         console.error(overallError);
+        showError("Could not load overall votes. Check that overall_votes exists and has read access.");
       } else {
-        overallData.forEach(row => {
+        (overallData || []).forEach(row => {
           if (overallCounts[row.team_id] !== undefined) {
             overallCounts[row.team_id] += 1;
           }
@@ -451,8 +479,9 @@
 
       if (categoryError) {
         console.error(categoryError);
+        showError("Could not load category votes. Check that category_votes exists and has read access.");
       } else {
-        categoryData.forEach(row => {
+        (categoryData || []).forEach(row => {
           if (categoryCounts[row.category] && categoryCounts[row.category][row.team_id] !== undefined) {
             categoryCounts[row.category][row.team_id] += 1;
           }
@@ -466,6 +495,7 @@
     }
 
     async function voteOverall(teamId) {
+      clearError();
       const payload = { voter_id: voterId, team_id: teamId };
 
       const { error } = await supabase
@@ -473,12 +503,13 @@
         .upsert(payload, { onConflict: "voter_id" });
 
       if (error) {
-        alert("Overall vote failed.");
         console.error(error);
+        showError("Overall vote failed. Check that overall_votes has voter_id and the unique index on voter_id.");
       }
     }
 
     async function voteCategory(category, teamId) {
+      clearError();
       const payload = { voter_id: voterId, category, team_id: teamId };
 
       const { error } = await supabase
@@ -486,8 +517,8 @@
         .upsert(payload, { onConflict: "category,voter_id" });
 
       if (error) {
-        alert("Category vote failed.");
         console.error(error);
+        showError("Category vote failed. Check that category_votes has voter_id and the unique index on (category, voter_id).");
       }
     }
 
@@ -658,6 +689,7 @@
     window.voteOverall = voteOverall;
     window.voteCategory = voteCategory;
 
+    renderAll();
     loadVotes();
     subscribe();
     showVotingView();
