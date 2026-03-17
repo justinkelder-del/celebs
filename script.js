@@ -53,7 +53,6 @@ function renderTeams() {
   const container = document.getElementById("galleryGrid");
   container.innerHTML = "";
 
-  // 3 column layout
   container.style.display = "grid";
   container.style.gridTemplateColumns = "repeat(3, 1fr)";
   container.style.gap = "26px";
@@ -67,13 +66,11 @@ function renderTeams() {
     teamDiv.style.padding = "24px";
     teamDiv.style.boxShadow = "0 20px 50px rgba(20, 32, 51, 0.10)";
 
-    // TITLE
     const title = document.createElement("h2");
     title.textContent = team.name;
     title.style.margin = "0 0 8px";
     title.style.fontSize = "2rem";
 
-    // SUBTITLE
     const subtitle = document.createElement("p");
     subtitle.textContent = "Anonymous celebrity draft roster.";
     subtitle.style.margin = "0 0 20px";
@@ -90,7 +87,6 @@ function renderTeams() {
       card.style.overflow = "hidden";
       card.style.marginBottom = "16px";
 
-      // CATEGORY HEADER
       const header = document.createElement("div");
       header.textContent = player.category;
       header.style.background = "#0f172a";
@@ -100,19 +96,16 @@ function renderTeams() {
       header.style.textTransform = "uppercase";
       header.style.padding = "10px 14px";
 
-      // IMAGE (BEST SETTINGS)
       const img = document.createElement("img");
       img.src = player.image;
       img.alt = player.celeb;
-
       img.style.width = "100%";
-      img.style.aspectRatio = "3 / 4";     // 👈 consistent sizing
+      img.style.aspectRatio = "3 / 4";
       img.style.height = "auto";
-      img.style.objectFit = "cover";       // 👈 fills nicely
-      img.style.objectPosition = "top";    // 👈 keeps faces visible
+      img.style.objectFit = "cover";
+      img.style.objectPosition = "top";
       img.style.display = "block";
 
-      // INFO
       const info = document.createElement("div");
       info.style.padding = "12px";
 
@@ -138,12 +131,6 @@ function renderTeams() {
   });
 }
 
-window.voteOverall = voteOverall;
-window.voteCategory = voteCategory;
-
 document.addEventListener("DOMContentLoaded", () => {
-  renderAll();
-  loadVotes();
-  subscribe();
-  showVotingView();
+  renderTeams();
 });
