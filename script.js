@@ -106,13 +106,17 @@ async function loadVotes() {
   setStatus("Loading votes...");
 
   try {
-    const [teamRes, overallRes] = await Promise.all([
-      supabaseClient.from("team_votes").select("team_id"),
-      supabaseClient.from("overall_votes").select("team_id")
-    ]);
+    const teamRes = await supabaseClient.from("team_votes").select("team_id");
+    if (teamRes.error) {
+      console.error("team_votes select error:", teamRes.error);
+      throw teamRes.error;
+    }
 
-    if (teamRes.error) throw teamRes.error;
-    if (overallRes.error) throw overallRes.error;
+    const overallRes = await supabaseClient.from("overall_votes").select("team_id");
+    if (overallRes.error) {
+      console.error("overall_votes select error:", overallRes.error);
+      throw overallRes.error;
+    }
 
     teamVoteCounts = {};
     overallVoteCounts = {};
@@ -128,7 +132,7 @@ async function loadVotes() {
     setStatus("");
   } catch (error) {
     console.error("Error loading votes:", error);
-    setStatus("Could not load votes.", true);
+    setStatus(`Could not load votes: ${error.message || "unknown error"}`, true);
   }
 }
 
