@@ -53,6 +53,7 @@ const teams = [
 
 let teamVoteCounts = {};
 let overallVoteCounts = {};
+let categoryVoteCounts = {};
 const voterId = getOrCreateVoterId();
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -81,8 +82,10 @@ function createStatusBar() {
   bar.style.borderRadius = "12px";
   bar.style.display = "none";
   bar.style.fontWeight = "600";
+  bar.style.boxSizing = "border-box";
 
-  document.body.insertBefore(bar, document.getElementById("galleryGrid"));
+  const grid = document.getElementById("galleryGrid");
+  document.body.insertBefore(bar, grid);
 }
 
 function setStatus(message, isError = false) {
@@ -102,24 +105,26 @@ function setStatus(message, isError = false) {
   bar.style.border = isError ? "1px solid #fecaca" : "1px solid #bfdbfe";
 }
 
+function getCategoryKey(teamId, category) {
+  return `${teamId}|||${category}`;
+}
+
 async function loadVotes() {
   setStatus("Loading votes...");
 
   try {
     const teamRes = await supabaseClient.from("team_votes").select("team_id");
-    if (teamRes.error) {
-      console.error("team_votes select error:", teamRes.error);
-      throw teamRes.error;
-    }
+    if (teamRes.error) throw teamRes.error;
 
     const overallRes = await supabaseClient.from("overall_votes").select("team_id");
-    if (overallRes.error) {
-      console.error("overall_votes select error:", overallRes.error);
-      throw overallRes.error;
-    }
+    if (overallRes.error) throw overallRes.error;
+
+    const categoryRes = await supabaseClient.from("category_votes").select("team_id, category");
+    if (categoryRes.error) throw categoryRes.error;
 
     teamVoteCounts = {};
     overallVoteCounts = {};
+    categoryVoteCounts = {};
 
     for (const row of teamRes.data || []) {
       teamVoteCounts[row.team_id] = (teamVoteCounts[row.team_id] || 0) + 1;
@@ -127,6 +132,11 @@ async function loadVotes() {
 
     for (const row of overallRes.data || []) {
       overallVoteCounts[row.team_id] = (overallVoteCounts[row.team_id] || 0) + 1;
+    }
+
+    for (const row of categoryRes.data || []) {
+      const key = getCategoryKey(row.team_id, row.category);
+      categoryVoteCounts[key] = (categoryVoteCounts[key] || 0) + 1;
     }
 
     setStatus("");
@@ -151,7 +161,7 @@ function renderTeams() {
 
   container.innerHTML = "";
   container.style.display = "grid";
-  container.style.gridTemplateColumns = "repeat(3, 1fr)";
+  container.style.gridTemplateColumns = "repeat(auto-fit, minmax(320px, 1fr))";
   container.style.gap = "26px";
   container.style.alignItems = "start";
 
@@ -162,6 +172,7 @@ function renderTeams() {
     teamDiv.style.borderRadius = "28px";
     teamDiv.style.padding = "24px";
     teamDiv.style.boxShadow = "0 20px 50px rgba(20, 32, 51, 0.10)";
+    teamDiv.style.boxSizing = "border-box";
 
     const title = document.createElement("h2");
     title.textContent = team.name;
@@ -226,9 +237,35 @@ function renderTeams() {
       const year = document.createElement("div");
       year.textContent = `Peak year: ${player.year}`;
       year.style.color = "#475569";
+      year.style.marginTop = "4px";
 
       info.appendChild(name);
       info.appendChild(year);
+
+      const categoryKey = getCategoryKey(team.id, player.category);
+      const categoryCount = categoryVoteCounts[categoryKey] || 0;
+
+      const categoryCountDiv = document.createElement("div");
+      categoryCountDiv.textContent = `Category Votes: ${categoryCount}`;
+      categoryCountDiv.style.marginTop = "10px";
+      categoryCountDiv.style.fontSize = "14px";
+      categoryCountDiv.style.color = "#334155";
+
+      const categoryButton = document.createElement("button");
+      categoryButton.textContent = `Vote ${player.category}`;
+      categoryButton.style.width = "100%";
+      categoryButton.style.padding = "10px";
+      categoryButton.style.marginTop = "10px";
+      categoryButton.style.border = "none";
+      categoryButton.style.borderRadius = "10px";
+      categoryButton.style.background = "#475569";
+      categoryButton.style.color = "white";
+      categoryButton.style.cursor = "pointer";
+      categoryButton.style.fontWeight = "600";
+      categoryButton.addEventListener("click", () => voteCategory(team.id, player.category, categoryButton));
+
+      info.appendChild(categoryCountDiv);
+      info.appendChild(categoryButton);
 
       card.appendChild(header);
       card.appendChild(img);
@@ -268,6 +305,30 @@ function renderTeams() {
 
     container.appendChild(teamDiv);
   });
+}
+
+async function voteCategory(teamId, category, button) {
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Submitting...";
+
+  try {
+    const { error } = await supabaseClient
+      .from("category_votes")
+      .insert([{ team_id: teamId, category: category, voter_id: voterId }]);
+
+    if (error) throw error;
+
+    const key = getCategoryKey(teamId, category);
+    categoryVoteCounts[key] = (categoryVoteCounts[key] || 0) + 1;
+    renderTeams();
+    setStatus(`Vote submitted for ${category}.`);
+  } catch (error) {
+    console.error("Category vote failed:", error);
+    setStatus("Category vote failed.", true);
+    button.disabled = false;
+    button.textContent = originalText;
+  }
 }
 
 async function voteTeam(teamId, button) {
