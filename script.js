@@ -1,136 +1,691 @@
-const teams = [
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Anonymous Celebrity Draft Voting</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 40px;
+      background: #f5f7fb;
+      color: #142033;
+    }
+    h1 {
+      font-size: 44px;
+      line-height: 1.05;
+      margin: 0 0 12px;
+    }
+    .subtitle {
+      color: #5f6f86;
+      font-size: 18px;
+      margin: 0 0 26px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .pill {
+      background: white;
+      border: 1px solid #dbe3ef;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #475569;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .top-button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .primary {
+      background: #1d4ed8;
+      color: white;
+    }
+    .secondary {
+      background: white;
+      color: #142033;
+      border: 1px solid #dbe3ef;
+    }
+    .notice {
+      background: #fff;
+      border: 1px solid #dbe3ef;
+      border-radius: 18px;
+      padding: 16px 18px;
+      color: #475569;
+      margin-bottom: 28px;
+    }
+    .error-banner {
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      color: #9f1239;
+      border-radius: 18px;
+      padding: 16px 18px;
+      margin-bottom: 28px;
+      display: none;
+      white-space: pre-wrap;
+    }
+    #leaderboard,
+    #galleryGrid,
+    #resultsMode {
+      width: 100%;
+    }
+    #leaderboard {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .leader-card {
+      background: white;
+      border-radius: 20px;
+      padding: 18px;
+      border: 1px solid rgba(219, 227, 239, 0.9);
+      box-shadow: 0 12px 30px rgba(20, 32, 51, 0.06);
+    }
+    .leader-card h3 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+    .leader-stat {
+      font-size: 14px;
+      color: #475569;
+      margin-bottom: 10px;
+    }
+    .progress {
+      width: 100%;
+      height: 10px;
+      background: #e8eef8;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #1d4ed8, #4f7df0);
+      border-radius: 999px;
+    }
+    #galleryGrid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 26px;
+    }
+    .team {
+      background: white;
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(20, 32, 51, 0.10);
+      border: 1px solid rgba(219, 227, 239, 0.85);
+    }
+    .team h2 {
+      margin: 0 0 8px;
+      font-size: 32px;
+    }
+    .team-sub {
+      margin: 0 0 18px;
+      color: #5f6f86;
+    }
+    .vote-box {
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      border: 1px solid #e2e8f0;
+    }
+    .vote-title {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .small {
+      font-size: 13px;
+      color: #64748b;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .vote-btn {
+      background: #1d4ed8;
+      color: white;
+    }
+    .vote-btn.secondary-dark {
+      background: #0f172a;
+      color: white;
+    }
+    .vote-btn:disabled {
+      opacity: 0.75;
+      cursor: default;
+    }
+    .card {
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      background: white;
+    }
+    .category {
+      background: #0f172a;
+      color: white;
+      padding: 10px 12px;
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+    .card img {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      object-position: top;
+      display: block;
+      background: #e2e8f0;
+    }
+    .info {
+      padding: 12px;
+    }
+    .celeb-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #142033;
+      margin-bottom: 4px;
+    }
+    #resultsMode {
+      display: none;
+    }
+    .results-wrap {
+      background: white;
+      border-radius: 28px;
+      padding: 28px;
+      border: 1px solid rgba(219, 227, 239, 0.85);
+      box-shadow: 0 20px 50px rgba(20, 32, 51, 0.10);
+    }
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 24px;
+    }
+    .winner-banner {
+      background: #0f172a;
+      color: white;
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 22px;
+    }
+    .cat-results {
+      margin-top: 28px;
+      display: grid;
+      gap: 14px;
+    }
+    .cat-row {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .cat-row-title {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .hidden {
+      display: none !important;
+    }
+    @media (max-width: 1100px) {
+      #galleryGrid, #leaderboard, .results-grid {
+        grid-template-columns: 1fr;
+      }
+      body {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Vote for the best overall team</h1>
+  <p class="subtitle">Vote by category and overall team. Scores update live for everyone.</p>
 
-  {
-    id: "team-1",
-    name: "Team 1",
-    roster: [
-      { category: "Barely Legal (18–22)", celeb: "Margot Robbie", year: "2012", image: "images/team-1/barely-legal.jpeg" },
-      { category: "Prime (23–30)", celeb: "Jessica Alba", year: "2007", image: "images/team-1/prime.jpeg" },
-      { category: "Mature (30–45)", celeb: "Natalie Portman", year: "2025", image: "images/team-1/mature.jpeg" },
-      { category: "Veteran (45–62)", celeb: "Salma Hayek", year: "2025", image: "images/team-1/veteran.jpeg" },
-      { category: "Legend (63+)", celeb: "Christie Brinkley", year: "2017", image: "images/team-1/legend.jpeg" },
-      { category: "Comedian", celeb: "Annie Agar", year: "2025", image: "images/team-1/comedian.jpeg" },
-      { category: "Musician", celeb: "Shakira", year: "2025", image: "images/team-1/musician.jpeg" },
-      { category: "Victoria’s Secret Model", celeb: "Miranda Kerr", year: "2009", image: "images/team-1/vs-model.jpeg" },
-      { category: "SI Swimsuit Model", celeb: "Tyra Banks", year: "1997", image: "images/team-1/si-model.jpeg" }
-    ]
-  },
+  <div class="topbar">
+    <div class="pill" id="overallTotalPill">0 overall votes</div>
+    <div class="pill" id="categoryTotalPill">0 category votes</div>
+    <div class="pill" id="resultsStatusPill">Results hidden</div>
+  </div>
 
-  {
-    id: "team-2",
-    name: "Team 2",
-    roster: [
-      { category: "Barely Legal (18–22)", celeb: "Brigitte Bardot", year: "1956", image: "images/team-2/barely-legal.jpeg" },
-      { category: "Prime (23–30)", celeb: "Sydney Sweeney", year: "2025", image: "images/team-2/prime.jpeg" },
-      { category: "Mature (30–45)", celeb: "Halle Berry", year: "2025", image: "images/team-2/mature.jpeg" },
-      { category: "Veteran (45–62)", celeb: "Hannah Waddingham", year: "2025", image: "images/team-2/veteran.jpeg" },
-      { category: "Legend (63+)", celeb: "Susanna Hoffs", year: "2025", image: "images/team-2/legend.jpeg" },
-      { category: "Comedian", celeb: "Sarah Silverman", year: "2015", image: "images/team-2/comedian.jpeg" },
-      { category: "Musician", celeb: "Sophia Loren", year: "1956", image: "images/team-2/musician.jpeg" },
-      { category: "Victoria’s Secret Model", celeb: "Rosie Huntington-Whiteley", year: "2010", image: "images/team-2/vs-model.jpeg" },
-      { category: "SI Swimsuit Model", celeb: "Kate Upton", year: "2003", image: "images/team-2/si-model.jpeg" }
-    ]
-  },
+  <div class="controls">
+    <button class="top-button secondary" id="showVotingBtn">Voting View</button>
+    <button class="top-button secondary" id="showResultsBtn">Results View</button>
+    <button class="top-button primary" id="toggleRevealBtn">Toggle Results Reveal</button>
+  </div>
 
-  {
-    id: "team-3",
-    name: "Team 3",
-    roster: [
-      { category: "Barely Legal (18–22)", celeb: "Jennifer Love Hewitt", year: "1998", image: "images/team-3/barely-legal.jpeg" },
-      { category: "Prime (23–30)", celeb: "Scarlett Johansson", year: "2008", image: "images/team-3/prime.jpeg" },
-      { category: "Mature (30–45)", celeb: "Ana de Armas", year: "2026", image: "images/team-3/mature.jpeg" },
-      { category: "Veteran (45–62)", celeb: "Sofia Vergara", year: "2017", image: "images/team-3/veteran.jpeg" },
-      { category: "Legend (63+)", celeb: "Demi Moore", year: "2026", image: "images/team-3/legend.jpeg" },
-      { category: "Comedian", celeb: "Iliza Shlesinger", year: "2009", image: "images/team-3/comedian.jpeg" },
-      { category: "Musician", celeb: "Britney Spears", year: "2001", image: "images/team-3/musician.jpg" },
-      { category: "Victoria’s Secret Model", celeb: "Adriana Lima", year: "2017", image: "images/team-3/vs-model.jpeg" },
-      { category: "SI Swimsuit Model", celeb: "Elle MacPherson", year: "1988", image: "images/team-3/si-model.jpeg" }
-    ]
-  }
-];
+  <div class="notice">
+    One overall vote per browser and one vote per category per browser. Results update live across all visitors.
+  </div>
 
-function renderTeams() {
-  const container = document.getElementById("galleryGrid");
-  container.innerHTML = "";
+  <div class="error-banner" id="errorBanner"></div>
 
-  container.style.display = "grid";
-  container.style.gridTemplateColumns = "repeat(3, 1fr)";
-  container.style.gap = "26px";
+  <div id="leaderboard"></div>
+  <div id="galleryGrid"></div>
 
-  teams.forEach(team => {
-    const teamDiv = document.createElement("div");
+  <div id="resultsMode">
+    <div class="results-wrap">
+      <div class="winner-banner" id="overallWinnerBanner"></div>
+      <div class="results-grid" id="resultsOverallGrid"></div>
+      <div class="cat-results" id="categoryResultsGrid"></div>
+    </div>
+  </div>
 
-    teamDiv.style.background = "#ffffff";
-    teamDiv.style.border = "1px solid rgba(219, 227, 239, 0.7)";
-    teamDiv.style.borderRadius = "28px";
-    teamDiv.style.padding = "24px";
-    teamDiv.style.boxShadow = "0 20px 50px rgba(20, 32, 51, 0.10)";
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://izgdeuonjjnzaikcmqkb.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z2RldW9uamp6bmFpa2NtcWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjA3MjYsImV4cCI6MjA4OTMzNjcyNn0.bcj1JdyVeOk_RNmiG0jWZ08JtWpWV3v42ZK2ngaaspc";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const title = document.createElement("h2");
-    title.textContent = team.name;
-    title.style.margin = "0 0 8px";
-    title.style.fontSize = "2rem";
+    const teams = [
+      {
+        id: "team-1",
+        name: "Team 1",
+        roster: [
+          { category: "Barely Legal (18–22)", celeb: "Margot Robbie", year: "2022", image: "images/team-1/barely-legal.jpeg" },
+          { category: "Prime (23–30)", celeb: "Jessica Alba", year: "2007", image: "images/team-1/prime.jpeg" },
+          { category: "Mature (30–45)", celeb: "Natalie Portman", year: "2025", image: "images/team-1/mature.jpeg" },
+          { category: "Veteran (45–62)", celeb: "Salma Hayek", year: "2025", image: "images/team-1/veteran.jpeg" },
+          { category: "Legend (63+)", celeb: "Christie Brinkley", year: "2017", image: "images/team-1/legend.jpeg" },
+          { category: "Comedian", celeb: "Annie Agar", year: "2025", image: "images/team-1/comedian.jpeg" },
+          { category: "Musician", celeb: "Shakira", year: "2025", image: "images/team-1/musician.jpeg" },
+          { category: "Victoria’s Secret Model", celeb: "Miranda Kerr", year: "2009", image: "images/team-1/vs-model.jpeg" },
+          { category: "SI Swimsuit Model", celeb: "Tyra Banks", year: "1997", image: "images/team-1/si-model.jpeg" }
+        ]
+      },
+      {
+        id: "team-2",
+        name: "Team 2",
+        roster: [
+          { category: "Barely Legal (18–22)", celeb: "Brigitte Bardot", year: "1956", image: "images/team-2/barely-legal.jpeg" },
+          { category: "Prime (23–30)", celeb: "Sydney Sweeney", year: "2025", image: "images/team-2/prime.jpeg" },
+          { category: "Mature (30–45)", celeb: "Halle Berry", year: "2025", image: "images/team-2/mature.jpeg" },
+          { category: "Veteran (45–62)", celeb: "Hannah Waddingham", year: "2025", image: "images/team-2/veteran.jpeg" },
+          { category: "Legend (63+)", celeb: "Susanna Hoffs", year: "2025", image: "images/team-2/legend.jpeg" },
+          { category: "Comedian", celeb: "Sarah Silverman", year: "2015", image: "images/team-2/comedian.jpeg" },
+          { category: "Musician", celeb: "Sophia Loren", year: "1956", image: "images/team-2/musician.jpeg" },
+          { category: "Victoria’s Secret Model", celeb: "Rosie Huntington-Whiteley", year: "2010", image: "images/team-2/vs-model.jpeg" },
+          { category: "SI Swimsuit Model", celeb: "Kate Upton", year: "2003", image: "images/team-2/si-model.jpeg" }
+        ]
+      },
+      {
+        id: "team-3",
+        name: "Team 3",
+        roster: [
+          { category: "Barely Legal (18–22)", celeb: "Jennifer Love Hewitt", year: "1998", image: "images/team-3/barely-legal.jpeg" },
+          { category: "Prime (23–30)", celeb: "Scarlett Johansson", year: "2008", image: "images/team-3/prime.jpeg" },
+          { category: "Mature (30–45)", celeb: "Ana de Armas", year: "2026", image: "images/team-3/mature.jpeg" },
+          { category: "Veteran (45–62)", celeb: "Sofia Vergara", year: "2017", image: "images/team-3/veteran.jpeg" },
+          { category: "Legend (63+)", celeb: "Demi Moore", year: "2026", image: "images/team-3/legend.jpeg" },
+          { category: "Comedian", celeb: "Iliza Shlesinger", year: "2009", image: "images/team-3/comedian.jpeg" },
+          { category: "Musician", celeb: "Britney Spears", year: "2001", image: "images/team-3/musician.jpg" },
+          { category: "Victoria’s Secret Model", celeb: "Adriana Lima", year: "2017", image: "images/team-3/vs-model.jpeg" },
+          { category: "SI Swimsuit Model", celeb: "Elle MacPherson", year: "1988", image: "images/team-3/si-model.jpeg" }
+        ]
+      }
+    ];
 
-    const subtitle = document.createElement("p");
-    subtitle.textContent = "Anonymous celebrity draft roster.";
-    subtitle.style.margin = "0 0 20px";
-    subtitle.style.color = "#5f6f86";
+    const teamIds = teams.map(t => t.id);
+    const categories = teams[0].roster.map(p => p.category);
 
-    teamDiv.appendChild(title);
-    teamDiv.appendChild(subtitle);
+    let revealResults = false;
+    let overallCounts = blankTeamCounts();
+    let categoryCounts = blankCategoryCounts();
+    let myOverallVote = null;
+    let myCategoryVotes = {};
 
-    team.roster.forEach(player => {
-      const card = document.createElement("div");
+    function $(id) {
+      return document.getElementById(id);
+    }
 
-      card.style.border = "1px solid #e2e8f0";
-      card.style.borderRadius = "16px";
-      card.style.overflow = "hidden";
-      card.style.marginBottom = "16px";
+    function showError(message) {
+      const banner = $("errorBanner");
+      banner.style.display = "block";
+      banner.textContent = message;
+    }
 
-      const header = document.createElement("div");
-      header.textContent = player.category;
-      header.style.background = "#0f172a";
-      header.style.color = "white";
-      header.style.fontSize = "13px";
-      header.style.fontWeight = "700";
-      header.style.textTransform = "uppercase";
-      header.style.padding = "10px 14px";
+    function clearError() {
+      const banner = $("errorBanner");
+      banner.style.display = "none";
+      banner.textContent = "";
+    }
 
-      const img = document.createElement("img");
-      img.src = player.image;
-      img.alt = player.celeb;
-      img.style.width = "100%";
-      img.style.aspectRatio = "3 / 4";
-      img.style.height = "auto";
-      img.style.objectFit = "cover";
-      img.style.objectPosition = "top";
-      img.style.display = "block";
+    function blankTeamCounts() {
+      return { "team-1": 0, "team-2": 0, "team-3": 0 };
+    }
 
-      const info = document.createElement("div");
-      info.style.padding = "12px";
+    function blankCategoryCounts() {
+      const obj = {};
+      categories.forEach(category => {
+        obj[category] = blankTeamCounts();
+      });
+      return obj;
+    }
 
-      const name = document.createElement("div");
-      name.textContent = player.celeb;
-      name.style.fontWeight = "700";
+    function getOrCreateVoterId() {
+      let voterId = localStorage.getItem("celebs_voter_id");
+      if (!voterId) {
+        voterId = crypto.randomUUID();
+        localStorage.setItem("celebs_voter_id", voterId);
+      }
+      return voterId;
+    }
 
-      const year = document.createElement("div");
-      year.textContent = `Peak year: ${player.year}`;
-      year.style.color = "#475569";
+    const voterId = getOrCreateVoterId();
 
-      info.appendChild(name);
-      info.appendChild(year);
+    function sumTeamVotes(obj) {
+      return Object.values(obj).reduce((a, b) => a + b, 0);
+    }
 
-      card.appendChild(header);
-      card.appendChild(img);
-      card.appendChild(info);
+    function percent(count, total) {
+      return total ? Math.round((count / total) * 100) : 0;
+    }
 
-      teamDiv.appendChild(card);
+    function leadingTeam(counts) {
+      let best = teamIds[0];
+      teamIds.forEach(id => {
+        if (counts[id] > counts[best]) best = id;
+      });
+      return best;
+    }
+
+    async function loadSettings() {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("reveal_results")
+        .eq("id", 1)
+        .maybeSingle();
+
+      if (error) {
+        console.error(error);
+        showError("Could not load site settings. Check that the site_settings table exists.");
+        return;
+      }
+
+      revealResults = !!(data && data.reveal_results);
+    }
+
+    async function toggleRevealResults() {
+      clearError();
+      const { error } = await supabase
+        .from("site_settings")
+        .update({ reveal_results: !revealResults, updated_at: new Date().toISOString() })
+        .eq("id", 1);
+
+      if (error) {
+        console.error(error);
+        showError("Could not update results reveal. Check the site_settings table and policies.");
+      }
+    }
+
+    async function loadVotes() {
+      clearError();
+      overallCounts = blankTeamCounts();
+      categoryCounts = blankCategoryCounts();
+      myOverallVote = null;
+      myCategoryVotes = {};
+
+      await loadSettings();
+
+      const overallResp = await supabase
+        .from("overall_votes")
+        .select("team_id, voter_id");
+
+      if (overallResp.error) {
+        console.error(overallResp.error);
+        showError("Could not load overall votes. Check that overall_votes exists and has read access.");
+      } else {
+        (overallResp.data || []).forEach(row => {
+          if (overallCounts[row.team_id] !== undefined) overallCounts[row.team_id] += 1;
+          if (row.voter_id === voterId) myOverallVote = row.team_id;
+        });
+      }
+
+      const categoryResp = await supabase
+        .from("category_votes")
+        .select("category, team_id, voter_id");
+
+      if (categoryResp.error) {
+        console.error(categoryResp.error);
+        showError("Could not load category votes. Check that category_votes exists and has read access.");
+      } else {
+        (categoryResp.data || []).forEach(row => {
+          if (categoryCounts[row.category] && categoryCounts[row.category][row.team_id] !== undefined) {
+            categoryCounts[row.category][row.team_id] += 1;
+          }
+          if (row.voter_id === voterId) myCategoryVotes[row.category] = row.team_id;
+        });
+      }
+
+      renderAll();
+    }
+
+    async function voteOverall(teamId) {
+      clearError();
+      const payload = { voter_id: voterId, team_id: teamId };
+
+      const { error } = await supabase
+        .from("overall_votes")
+        .upsert(payload, { onConflict: "voter_id" });
+
+      if (error) {
+        console.error(error);
+        showError("Overall vote failed. Check that overall_votes has voter_id and a unique index on voter_id.");
+      }
+    }
+
+    async function voteCategory(category, teamId) {
+      clearError();
+      const payload = { voter_id: voterId, category, team_id: teamId };
+
+      const { error } = await supabase
+        .from("category_votes")
+        .upsert(payload, { onConflict: "category,voter_id" });
+
+      if (error) {
+        console.error(error);
+        showError("Category vote failed. Check that category_votes has voter_id and a unique index on (category, voter_id).");
+      }
+    }
+
+    function renderPills() {
+      $("overallTotalPill").textContent = `${sumTeamVotes(overallCounts)} overall votes`;
+      const allCategoryVotes = categories.reduce((sum, category) => sum + sumTeamVotes(categoryCounts[category]), 0);
+      $("categoryTotalPill").textContent = `${allCategoryVotes} category votes`;
+      $("resultsStatusPill").textContent = revealResults ? "Results revealed" : "Results hidden";
+    }
+
+    function renderLeaderboard() {
+      const total = sumTeamVotes(overallCounts);
+      const leaderboard = $("leaderboard");
+      leaderboard.innerHTML = "";
+
+      const sorted = [...teams].sort((a, b) => overallCounts[b.id] - overallCounts[a.id]);
+
+      sorted.forEach(team => {
+        const count = overallCounts[team.id];
+        const pct = percent(count, total);
+
+        const card = document.createElement("div");
+        card.className = "leader-card";
+        card.innerHTML = `
+          <h3>${team.name}</h3>
+          <div class="leader-stat">${count} overall votes • ${pct}%</div>
+          <div class="progress">
+            <div class="progress-bar" style="width:${pct}%"></div>
+          </div>
+        `;
+        leaderboard.appendChild(card);
+      });
+    }
+
+    function renderVotingView() {
+      const galleryGrid = $("galleryGrid");
+      galleryGrid.innerHTML = "";
+
+      teams.forEach(team => {
+        const teamDiv = document.createElement("div");
+        teamDiv.className = "team";
+
+        const overallTotal = sumTeamVotes(overallCounts);
+        const overallVotes = overallCounts[team.id];
+        const overallPct = percent(overallVotes, overallTotal);
+
+        teamDiv.innerHTML += `<h2>${team.name}</h2>`;
+        teamDiv.innerHTML += `<p class="team-sub">Anonymous celebrity draft roster.</p>`;
+        teamDiv.innerHTML += `
+          <div class="vote-box">
+            <div class="vote-title">Best Overall Team</div>
+            <div class="small">${overallVotes} votes • ${overallPct}%</div>
+            <button class="vote-btn" onclick="voteOverall('${team.id}')">
+              ${myOverallVote === team.id ? "Your overall vote" : "Vote best overall"}
+            </button>
+          </div>
+        `;
+
+        team.roster.forEach(player => {
+          const catVotes = categoryCounts[player.category][team.id];
+          const catTotal = sumTeamVotes(categoryCounts[player.category]);
+          const catPct = percent(catVotes, catTotal);
+          const votedHere = myCategoryVotes[player.category] === team.id;
+
+          teamDiv.innerHTML += `
+            <div class="card">
+              <div class="category">${player.category}</div>
+              <img src="${player.image}" alt="${player.celeb}">
+              <div class="info">
+                <div class="celeb-name">${player.celeb}</div>
+                <div class="small">Peak year: ${player.year}</div>
+                <div class="small" style="margin-top:10px;">${catVotes} category votes • ${catPct}%</div>
+                <button class="vote-btn secondary-dark" onclick="voteCategory(${JSON.stringify(player.category)}, '${team.id}')">
+                  ${votedHere ? "Your vote in this category" : "Vote this category"}
+                </button>
+              </div>
+            </div>
+          `;
+        });
+
+        galleryGrid.appendChild(teamDiv);
+      });
+    }
+
+    function renderResultsView() {
+      const overallLeaderId = leadingTeam(overallCounts);
+      const overallLeader = teams.find(t => t.id === overallLeaderId);
+      const overallTotal = sumTeamVotes(overallCounts);
+
+      $("overallWinnerBanner").innerHTML = revealResults
+        ? `<strong>Overall winner:</strong> ${overallLeader.name} with ${overallCounts[overallLeaderId]} votes (${percent(overallCounts[overallLeaderId], overallTotal)}%)`
+        : `<strong>Results mode is locked.</strong> Toggle reveal when you are ready to show winners.`;
+
+      const resultsOverallGrid = $("resultsOverallGrid");
+      resultsOverallGrid.innerHTML = "";
+
+      [...teams]
+        .sort((a, b) => overallCounts[b.id] - overallCounts[a.id])
+        .forEach(team => {
+          const count = overallCounts[team.id];
+          const pct = percent(count, overallTotal);
+          const el = document.createElement("div");
+          el.className = "leader-card";
+          el.innerHTML = `
+            <h3>${team.name}</h3>
+            <div class="leader-stat">${count} overall votes • ${pct}%</div>
+            <div class="progress">
+              <div class="progress-bar" style="width:${pct}%"></div>
+            </div>
+          `;
+          resultsOverallGrid.appendChild(el);
+        });
+
+      const categoryResultsGrid = $("categoryResultsGrid");
+      categoryResultsGrid.innerHTML = "";
+
+      categories.forEach(category => {
+        const leadId = leadingTeam(categoryCounts[category]);
+        const leadTeam = teams.find(t => t.id === leadId);
+        const total = sumTeamVotes(categoryCounts[category]);
+
+        const row = document.createElement("div");
+        row.className = "cat-row";
+        row.innerHTML = `
+          <div class="cat-row-title">${category}</div>
+          <div class="small" style="margin-bottom:10px;">
+            ${revealResults
+              ? `Winner: ${leadTeam.name} with ${categoryCounts[category][leadId]} votes (${percent(categoryCounts[category][leadId], total)}%)`
+              : `Results hidden`}
+          </div>
+          ${teams.map(team => `
+            <div class="small" style="margin:4px 0;">
+              ${team.name}: ${categoryCounts[category][team.id]} votes (${percent(categoryCounts[category][team.id], total)}%)
+            </div>
+          `).join("")}
+        `;
+        categoryResultsGrid.appendChild(row);
+      });
+    }
+
+    function renderAll() {
+      renderPills();
+      renderLeaderboard();
+      renderVotingView();
+      renderResultsView();
+    }
+
+    function showVotingView() {
+      $("leaderboard").classList.remove("hidden");
+      $("galleryGrid").classList.remove("hidden");
+      $("resultsMode").style.display = "none";
+    }
+
+    function showResultsView() {
+      $("leaderboard").classList.add("hidden");
+      $("galleryGrid").classList.add("hidden");
+      $("resultsMode").style.display = "block";
+    }
+
+    function subscribe() {
+      supabase.channel("live-votes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "overall_votes" }, () => loadVotes())
+        .on("postgres_changes", { event: "*", schema: "public", table: "category_votes" }, () => loadVotes())
+        .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, () => loadVotes())
+        .subscribe();
+    }
+
+    window.voteOverall = voteOverall;
+    window.voteCategory = voteCategory;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      $("showVotingBtn").addEventListener("click", showVotingView);
+      $("showResultsBtn").addEventListener("click", showResultsView);
+      $("toggleRevealBtn").addEventListener("click", toggleRevealResults);
+
+      renderAll();
+      loadVotes();
+      subscribe();
+      showVotingView();
     });
-
-    container.appendChild(teamDiv);
-  });
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  renderTeams();
-});
+  </script>
+</body>
+</html>
