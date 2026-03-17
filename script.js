@@ -54,7 +54,7 @@ const teams = [
 ];
 
 function renderTeams() {
-  const container = document.getElementById("teams-container");
+  const container = document.getElementById("galleryGrid");
 
   teams.forEach(team => {
     const teamDiv = document.createElement("div");
