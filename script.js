@@ -55,24 +55,73 @@ const teams = [
 
 function renderTeams() {
   const container = document.getElementById("galleryGrid");
+  container.innerHTML = "";
 
   teams.forEach(team => {
     const teamDiv = document.createElement("div");
-    teamDiv.className = "team";
+    teamDiv.className = "card";
+    teamDiv.style.padding = "24px";
+    teamDiv.style.borderRadius = "28px";
+    teamDiv.style.background = "#ffffff";
+    teamDiv.style.boxShadow = "0 20px 50px rgba(20, 32, 51, 0.10)";
+    teamDiv.style.border = "1px solid rgba(219, 227, 239, 0.7)";
 
     const title = document.createElement("h2");
     title.textContent = team.name;
+    title.style.margin = "0 0 8px";
+    title.style.fontSize = "2rem";
+    title.style.color = "#142033";
+
+    const subtitle = document.createElement("p");
+    subtitle.textContent = "Anonymous celebrity draft roster.";
+    subtitle.style.margin = "0 0 20px";
+    subtitle.style.color = "#5f6f86";
+    subtitle.style.fontSize = "1rem";
 
     teamDiv.appendChild(title);
+    teamDiv.appendChild(subtitle);
 
     team.roster.forEach(player => {
       const card = document.createElement("div");
-      card.className = "card";
+      card.style.border = "1px solid #e2e8f0";
+      card.style.borderRadius = "16px";
+      card.style.overflow = "hidden";
+      card.style.background = "#ffffff";
+      card.style.marginBottom = "16px";
 
       card.innerHTML = `
-        <img src="${player.image}" alt="${player.celeb}">
-        <h3>${player.category}</h3>
-        <p>${player.celeb} (${player.year})</p>
+        <div style="
+          background:#0f172a;
+          color:white;
+          font-size:13px;
+          font-weight:700;
+          letter-spacing:.05em;
+          text-transform:uppercase;
+          padding:10px 14px;
+        ">
+          ${player.category}
+        </div>
+
+        <img 
+          src="${player.image}" 
+          alt="${player.celeb}" 
+          style="
+            width:100%;
+            height:260px;
+            object-fit:cover;
+            display:block;
+            background:#e2e8f0;
+          "
+        />
+
+        <div style="padding:12px;">
+          <div style="font-size:16px; font-weight:700; color:#0f172a;">
+            ${player.celeb}
+          </div>
+          <div style="font-size:14px; color:#475569;">
+            Peak year: ${player.year}
+          </div>
+        </div>
       `;
 
       teamDiv.appendChild(card);
