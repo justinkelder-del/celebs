@@ -138,9 +138,12 @@ function renderTeams() {
   });
 }
 
-renderTeams();
+window.voteOverall = voteOverall;
+window.voteCategory = voteCategory;
 
 document.addEventListener("DOMContentLoaded", () => {
-  renderTeams();
-  loadVoteCounts(); // if you added this earlier
+  renderAll();
+  loadVotes();
+  subscribe();
+  showVotingView();
 });
