@@ -1,3 +1,8 @@
+const SUPABASE_URL = "https://izgdeuonjjznaikcmqkb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z2RldW9uamp6bmFpa2NtcWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjA3MjYsImV4cCI6MjA4OTMzNjcyNn0.bcj1JdyVeOk_RNmiG0jWZ08JtWpWV3v42ZK2ngaaspc";
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const teams = [
   {
     id: "team-1",
@@ -46,6 +51,87 @@ const teams = [
   }
 ];
 
+let teamVoteCounts = {};
+let overallVoteCounts = {};
+const voterId = getOrCreateVoterId();
+
+document.addEventListener("DOMContentLoaded", async () => {
+  createStatusBar();
+  await loadVotes();
+  renderTeams();
+});
+
+function getOrCreateVoterId() {
+  let id = localStorage.getItem("celebrity_voter_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("celebrity_voter_id", id);
+  }
+  return id;
+}
+
+function createStatusBar() {
+  if (document.getElementById("statusBar")) return;
+
+  const bar = document.createElement("div");
+  bar.id = "statusBar";
+  bar.style.maxWidth = "1400px";
+  bar.style.margin = "0 auto 20px auto";
+  bar.style.padding = "12px 16px";
+  bar.style.borderRadius = "12px";
+  bar.style.display = "none";
+  bar.style.fontWeight = "600";
+
+  document.body.insertBefore(bar, document.getElementById("galleryGrid"));
+}
+
+function setStatus(message, isError = false) {
+  const bar = document.getElementById("statusBar");
+  if (!bar) return;
+
+  if (!message) {
+    bar.style.display = "none";
+    bar.textContent = "";
+    return;
+  }
+
+  bar.style.display = "block";
+  bar.textContent = message;
+  bar.style.color = isError ? "#991b1b" : "#1e3a8a";
+  bar.style.background = isError ? "#fee2e2" : "#dbeafe";
+  bar.style.border = isError ? "1px solid #fecaca" : "1px solid #bfdbfe";
+}
+
+async function loadVotes() {
+  setStatus("Loading votes...");
+
+  try {
+    const [teamRes, overallRes] = await Promise.all([
+      supabaseClient.from("team_votes").select("team_id"),
+      supabaseClient.from("overall_votes").select("team_id")
+    ]);
+
+    if (teamRes.error) throw teamRes.error;
+    if (overallRes.error) throw overallRes.error;
+
+    teamVoteCounts = {};
+    overallVoteCounts = {};
+
+    for (const row of teamRes.data || []) {
+      teamVoteCounts[row.team_id] = (teamVoteCounts[row.team_id] || 0) + 1;
+    }
+
+    for (const row of overallRes.data || []) {
+      overallVoteCounts[row.team_id] = (overallVoteCounts[row.team_id] || 0) + 1;
+    }
+
+    setStatus("");
+  } catch (error) {
+    console.error("Error loading votes:", error);
+    setStatus("Could not load votes.", true);
+  }
+}
+
 function renderTeams() {
   const container = document.getElementById("galleryGrid");
   if (!container) {
@@ -53,12 +139,19 @@ function renderTeams() {
     return;
   }
 
+  const sortedTeams = [...teams].sort((a, b) => {
+    const aVotes = teamVoteCounts[a.id] || 0;
+    const bVotes = teamVoteCounts[b.id] || 0;
+    return bVotes - aVotes;
+  });
+
   container.innerHTML = "";
   container.style.display = "grid";
   container.style.gridTemplateColumns = "repeat(3, 1fr)";
   container.style.gap = "26px";
+  container.style.alignItems = "start";
 
-  teams.forEach(team => {
+  sortedTeams.forEach(team => {
     const teamDiv = document.createElement("div");
     teamDiv.style.background = "#ffffff";
     teamDiv.style.border = "1px solid rgba(219, 227, 239, 0.7)";
@@ -73,11 +166,24 @@ function renderTeams() {
 
     const subtitle = document.createElement("p");
     subtitle.textContent = "Anonymous celebrity draft roster.";
-    subtitle.style.margin = "0 0 20px";
+    subtitle.style.margin = "0 0 14px";
     subtitle.style.color = "#5f6f86";
+
+    const voteStats = document.createElement("div");
+    voteStats.style.display = "flex";
+    voteStats.style.gap = "16px";
+    voteStats.style.flexWrap = "wrap";
+    voteStats.style.margin = "0 0 20px";
+    voteStats.style.fontSize = "14px";
+    voteStats.style.color = "#334155";
+    voteStats.innerHTML = `
+      <div><strong>Team Votes:</strong> ${teamVoteCounts[team.id] || 0}</div>
+      <div><strong>Best Overall:</strong> ${overallVoteCounts[team.id] || 0}</div>
+    `;
 
     teamDiv.appendChild(title);
     teamDiv.appendChild(subtitle);
+    teamDiv.appendChild(voteStats);
 
     team.roster.forEach(player => {
       const card = document.createElement("div");
@@ -85,6 +191,7 @@ function renderTeams() {
       card.style.borderRadius = "16px";
       card.style.overflow = "hidden";
       card.style.marginBottom = "16px";
+      card.style.background = "#fff";
 
       const header = document.createElement("div");
       header.textContent = player.category;
@@ -126,8 +233,96 @@ function renderTeams() {
       teamDiv.appendChild(card);
     });
 
+    const voteButton = document.createElement("button");
+    voteButton.textContent = "Vote for Team";
+    voteButton.style.width = "100%";
+    voteButton.style.padding = "12px";
+    voteButton.style.marginTop = "8px";
+    voteButton.style.border = "none";
+    voteButton.style.borderRadius = "12px";
+    voteButton.style.background = "#1d4ed8";
+    voteButton.style.color = "white";
+    voteButton.style.cursor = "pointer";
+    voteButton.style.fontWeight = "700";
+    voteButton.addEventListener("click", () => voteTeam(team.id, voteButton));
+
+    const overallButton = document.createElement("button");
+    overallButton.textContent = "Vote Best Overall";
+    overallButton.style.width = "100%";
+    overallButton.style.padding = "12px";
+    overallButton.style.marginTop = "10px";
+    overallButton.style.border = "none";
+    overallButton.style.borderRadius = "12px";
+    overallButton.style.background = "#0f172a";
+    overallButton.style.color = "white";
+    overallButton.style.cursor = "pointer";
+    overallButton.style.fontWeight = "700";
+    overallButton.addEventListener("click", () => voteOverall(team.id, overallButton));
+
+    teamDiv.appendChild(voteButton);
+    teamDiv.appendChild(overallButton);
+
     container.appendChild(teamDiv);
   });
 }
 
-document.addEventListener("DOMContentLoaded", renderTeams);
+async function voteTeam(teamId, button) {
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Submitting...";
+
+  try {
+    const { error } = await supabaseClient
+      .from("team_votes")
+      .insert([{ team_id: teamId, voter_id: voterId }]);
+
+    if (error) throw error;
+
+    teamVoteCounts[teamId] = (teamVoteCounts[teamId] || 0) + 1;
+    renderTeams();
+    setStatus("Team vote submitted.");
+  } catch (error) {
+    console.error("Team vote failed:", error);
+    setStatus("Team vote failed.", true);
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
+async function voteOverall(teamId, button) {
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Submitting...";
+
+  try {
+    const { data: existingVote, error: checkError } = await supabaseClient
+      .from("overall_votes")
+      .select("team_id")
+      .eq("voter_id", voterId)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    if (existingVote) {
+      setStatus("You already used your Best Overall vote.", true);
+      button.disabled = false;
+      button.textContent = originalText;
+      return;
+    }
+
+    const { error: insertError } = await supabaseClient
+      .from("overall_votes")
+      .insert([{ team_id: teamId, voter_id: voterId }]);
+
+    if (insertError) throw insertError;
+
+    overallVoteCounts[teamId] = (overallVoteCounts[teamId] || 0) + 1;
+    renderTeams();
+    setStatus("Best Overall vote submitted.");
+  } catch (error) {
+    console.error("Overall vote failed:", error);
+    setStatus("Overall vote failed.", true);
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
