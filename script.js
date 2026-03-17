@@ -4,7 +4,7 @@ const teams = [
     id: "team-1",
     name: "Team 1",
     roster: [
-      { category: "Barely Legal (18–22)", celeb: "Margot Robbie", year: "2022", image: "images/team-1/barely-legal.jpeg" },
+      { category: "Barely Legal (18–22)", celeb: "Margot Robbie", year: "2012", image: "images/team-1/barely-legal.jpeg" },
       { category: "Prime (23–30)", celeb: "Jessica Alba", year: "2007", image: "images/team-1/prime.jpeg" },
       { category: "Mature (30–45)", celeb: "Natalie Portman", year: "2025", image: "images/team-1/mature.jpeg" },
       { category: "Veteran (45–62)", celeb: "Salma Hayek", year: "2025", image: "images/team-1/veteran.jpeg" },
