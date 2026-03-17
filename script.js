@@ -1,6 +1,5 @@
 const teams = [
 
-  // TEAM 1
   {
     id: "team-1",
     name: "Team 1",
@@ -17,7 +16,6 @@ const teams = [
     ]
   },
 
-  // TEAM 2
   {
     id: "team-2",
     name: "Team 2",
@@ -34,7 +32,6 @@ const teams = [
     ]
   },
 
-  // TEAM 3
   {
     id: "team-3",
     name: "Team 3",
@@ -50,79 +47,89 @@ const teams = [
       { category: "SI Swimsuit Model", celeb: "Elle MacPherson", year: "1988", image: "images/team-3/si-model.jpeg" }
     ]
   }
-
 ];
 
 function renderTeams() {
   const container = document.getElementById("galleryGrid");
   container.innerHTML = "";
 
+  // 3 column layout
+  container.style.display = "grid";
+  container.style.gridTemplateColumns = "repeat(3, 1fr)";
+  container.style.gap = "26px";
+
   teams.forEach(team => {
     const teamDiv = document.createElement("div");
-    teamDiv.className = "card";
-    teamDiv.style.padding = "24px";
-    teamDiv.style.borderRadius = "28px";
-    teamDiv.style.background = "#ffffff";
-    teamDiv.style.boxShadow = "0 20px 50px rgba(20, 32, 51, 0.10)";
-    teamDiv.style.border = "1px solid rgba(219, 227, 239, 0.7)";
 
+    teamDiv.style.background = "#ffffff";
+    teamDiv.style.border = "1px solid rgba(219, 227, 239, 0.7)";
+    teamDiv.style.borderRadius = "28px";
+    teamDiv.style.padding = "24px";
+    teamDiv.style.boxShadow = "0 20px 50px rgba(20, 32, 51, 0.10)";
+
+    // TITLE
     const title = document.createElement("h2");
     title.textContent = team.name;
     title.style.margin = "0 0 8px";
     title.style.fontSize = "2rem";
-    title.style.color = "#142033";
 
+    // SUBTITLE
     const subtitle = document.createElement("p");
     subtitle.textContent = "Anonymous celebrity draft roster.";
     subtitle.style.margin = "0 0 20px";
     subtitle.style.color = "#5f6f86";
-    subtitle.style.fontSize = "1rem";
 
     teamDiv.appendChild(title);
     teamDiv.appendChild(subtitle);
 
     team.roster.forEach(player => {
       const card = document.createElement("div");
+
       card.style.border = "1px solid #e2e8f0";
       card.style.borderRadius = "16px";
       card.style.overflow = "hidden";
-      card.style.background = "#ffffff";
       card.style.marginBottom = "16px";
 
-      card.innerHTML = `
-        <div style="
-          background:#0f172a;
-          color:white;
-          font-size:13px;
-          font-weight:700;
-          letter-spacing:.05em;
-          text-transform:uppercase;
-          padding:10px 14px;
-        ">
-          ${player.category}
-        </div>
+      // CATEGORY HEADER
+      const header = document.createElement("div");
+      header.textContent = player.category;
+      header.style.background = "#0f172a";
+      header.style.color = "white";
+      header.style.fontSize = "13px";
+      header.style.fontWeight = "700";
+      header.style.textTransform = "uppercase";
+      header.style.padding = "10px 14px";
 
-        <img 
-          src="${player.image}" 
-          alt="${player.celeb}" 
-          style="
-            width:100%;
-            height:260px;
-            object-fit:cover;
-            display:block;
-            background:#e2e8f0;
-          "
-        />
+      // IMAGE (BEST SETTINGS)
+      const img = document.createElement("img");
+      img.src = player.image;
+      img.alt = player.celeb;
 
-        <div style="padding:12px;">
-          <div style="font-size:16px; font-weight:700; color:#0f172a;">
-            ${player.celeb}
-          </div>
-          <div style="font-size:14px; color:#475569;">
-            Peak year: ${player.year}
-          </div>
-        </div>
-      `;
+      img.style.width = "100%";
+      img.style.aspectRatio = "3 / 4";     // 👈 consistent sizing
+      img.style.height = "auto";
+      img.style.objectFit = "cover";       // 👈 fills nicely
+      img.style.objectPosition = "top";    // 👈 keeps faces visible
+      img.style.display = "block";
+
+      // INFO
+      const info = document.createElement("div");
+      info.style.padding = "12px";
+
+      const name = document.createElement("div");
+      name.textContent = player.celeb;
+      name.style.fontWeight = "700";
+
+      const year = document.createElement("div");
+      year.textContent = `Peak year: ${player.year}`;
+      year.style.color = "#475569";
+
+      info.appendChild(name);
+      info.appendChild(year);
+
+      card.appendChild(header);
+      card.appendChild(img);
+      card.appendChild(info);
 
       teamDiv.appendChild(card);
     });
