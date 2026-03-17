@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio Voting Gallery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <span class="eyebrow">Portfolio Voting</span>
+      <h1>Choose your favorite gallery</h1>
+      <p class="hero-copy">
+        Browse all three portfolios, compare the styles, and vote for the one you love most.
+      </p>
+
+      <div class="hero-stats">
+        <div class="pill"><strong>3</strong> portfolios</div>
+        <div class="pill"><strong id="totalVotes">0</strong> total votes</div>
+        <div class="pill" id="yourVotePill">No vote yet</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="notice">
+      <strong>Important:</strong> this version is made for GitHub Pages and stores votes in the browser only.
+      It is perfect for previewing your galleries and letting each visitor pick a favorite on their own device,
+      but it does <em>not</em> collect one shared vote total across all visitors unless you connect a backend later.
+    </section>
+
+    <section class="gallery-grid" id="galleryGrid"></section>
+  </main>
+
+  <div class="modal hidden" id="galleryModal" aria-hidden="true">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-panel">
+      <button class="modal-close" id="closeModal" aria-label="Close">×</button>
+
+      <div class="modal-layout">
+        <div class="modal-images">
+          <img id="modalMainImage" class="modal-main-image" src="" alt="" />
+          <div class="thumb-grid" id="modalThumbGrid"></div>
+        </div>
+
+        <div class="modal-sidebar">
+          <p class="modal-label">Selected Portfolio</p>
+          <h2 id="modalTitle"></h2>
+          <p id="modalDescription" class="modal-description"></p>
+
+          <div class="vote-box">
+            <div class="vote-row">
+              <span>Votes</span>
+              <strong id="modalVotes">0</strong>
+            </div>
+            <div class="vote-row">
+              <span>Vote share</span>
+              <strong id="modalPercent">0%</strong>
+            </div>
+            <div class="progress">
+              <div class="progress-bar" id="modalProgress"></div>
+            </div>
+          </div>
+
+          <button class="primary-btn modal-vote-btn" id="modalVoteButton">Vote for this portfolio</button>
+          <p class="fine-print">
+            Replace the sample images in <code>script.js</code> with your own image URLs,
+            or point them to image files you upload into the repo.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
