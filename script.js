@@ -396,7 +396,7 @@
 
     renderAll();
     loadVotes();
-    subscribe();
+    subscribe(); 
     showVotingView();
   });
 })();
