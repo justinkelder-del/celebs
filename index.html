@@ -1,81 +1,239 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>Celebrity Draft Voting</title>
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portfolio Voting Gallery</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 40px;
+      background: #f5f7fb;
+      color: #142033;
+    }
+
+    h1 {
+      font-size: 42px;
+      margin-bottom: 10px;
+    }
+
+    p.subtitle {
+      color: #5f6f86;
+      margin-bottom: 30px;
+    }
+
+    #galleryGrid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 26px;
+    }
+
+    .team {
+      background: white;
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(20, 32, 51, 0.1);
+    }
+
+    .vote-box {
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .vote-btn {
+      background: #1d4ed8;
+      color: white;
+    }
+
+    .card {
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .category {
+      background: #0f172a;
+      color: white;
+      padding: 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    img {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      object-position: top;
+    }
+
+    .info {
+      padding: 12px;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #64748b;
+    }
+  </style>
 </head>
+
 <body>
-  <header class="hero">
-    <div class="container">
-      <span class="eyebrow">Portfolio Voting</span>
-      <h1>Choose your favorite gallery</h1>
-      <p class="hero-copy">
-        Browse all three portfolios, compare the styles, and vote for the one you love most.
-      </p>
 
-      <div class="hero-stats">
-        <div class="pill"><strong>3</strong> portfolios</div>
-        <div class="pill"><strong id="totalVotes">0</strong> total votes</div>
-        <div class="pill" id="yourVotePill">No vote yet</div>
+<h1>Choose your favorite gallery</h1>
+<p class="subtitle">Vote by category and overall team — updates live.</p>
+
+<div id="galleryGrid"></div>
+
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const SUPABASE_URL = "https://izgdeuonjjnzaikcmqkb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z2RldW9uamp6bmFpa2NtcWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjA3MjYsImV4cCI6MjA4OTMzNjcyNn0.bcj1JdyVeOk_RNmiG0jWZ08JtWpWV3v42ZK2ngaaspc";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const teams = [
+  {
+    id: "team-1",
+    name: "Team 1",
+    roster: [
+      { category: "Barely Legal (18–22)", celeb: "Margot Robbie", year: "2022", image: "images/team-1/barely-legal.jpeg" },
+      { category: "Prime (23–30)", celeb: "Jessica Alba", year: "2007", image: "images/team-1/prime.jpeg" },
+      { category: "Mature (30–45)", celeb: "Natalie Portman", year: "2025", image: "images/team-1/mature.jpeg" },
+      { category: "Veteran (45–62)", celeb: "Salma Hayek", year: "2025", image: "images/team-1/veteran.jpeg" },
+      { category: "Legend (63+)", celeb: "Christie Brinkley", year: "2017", image: "images/team-1/legend.jpeg" },
+      { category: "Comedian", celeb: "Annie Agar", year: "2025", image: "images/team-1/comedian.jpeg" },
+      { category: "Musician", celeb: "Shakira", year: "2025", image: "images/team-1/musician.jpeg" },
+      { category: "Victoria’s Secret Model", celeb: "Miranda Kerr", year: "2009", image: "images/team-1/vs-model.jpeg" },
+      { category: "SI Swimsuit Model", celeb: "Tyra Banks", year: "1997", image: "images/team-1/si-model.jpeg" }
+    ]
+  },
+  {
+    id: "team-2",
+    name: "Team 2",
+    roster: [
+      { category: "Barely Legal (18–22)", celeb: "Brigitte Bardot", year: "1956", image: "images/team-2/barely-legal.jpeg" },
+      { category: "Prime (23–30)", celeb: "Sydney Sweeney", year: "2025", image: "images/team-2/prime.jpeg" },
+      { category: "Mature (30–45)", celeb: "Halle Berry", year: "2025", image: "images/team-2/mature.jpeg" },
+      { category: "Veteran (45–62)", celeb: "Hannah Waddingham", year: "2025", image: "images/team-2/veteran.jpeg" },
+      { category: "Legend (63+)", celeb: "Susanna Hoffs", year: "2025", image: "images/team-2/legend.jpeg" },
+      { category: "Comedian", celeb: "Sarah Silverman", year: "2015", image: "images/team-2/comedian.jpeg" },
+      { category: "Musician", celeb: "Sophia Loren", year: "1956", image: "images/team-2/musician.jpeg" },
+      { category: "Victoria’s Secret Model", celeb: "Rosie Huntington-Whiteley", year: "2010", image: "images/team-2/vs-model.jpeg" },
+      { category: "SI Swimsuit Model", celeb: "Kate Upton", year: "2003", image: "images/team-2/si-model.jpeg" }
+    ]
+  },
+  {
+    id: "team-3",
+    name: "Team 3",
+    roster: [
+      { category: "Barely Legal (18–22)", celeb: "Jennifer Love Hewitt", year: "1998", image: "images/team-3/barely-legal.jpeg" },
+      { category: "Prime (23–30)", celeb: "Scarlett Johansson", year: "2008", image: "images/team-3/prime.jpeg" },
+      { category: "Mature (30–45)", celeb: "Ana de Armas", year: "2026", image: "images/team-3/mature.jpeg" },
+      { category: "Veteran (45–62)", celeb: "Sofia Vergara", year: "2017", image: "images/team-3/veteran.jpeg" },
+      { category: "Legend (63+)", celeb: "Demi Moore", year: "2026", image: "images/team-3/legend.jpeg" },
+      { category: "Comedian", celeb: "Iliza Shlesinger", year: "2009", image: "images/team-3/comedian.jpeg" },
+      { category: "Musician", celeb: "Britney Spears", year: "2001", image: "images/team-3/musician.jpg" },
+      { category: "Victoria’s Secret Model", celeb: "Adriana Lima", year: "2017", image: "images/team-3/vs-model.jpeg" },
+      { category: "SI Swimsuit Model", celeb: "Elle MacPherson", year: "1988", image: "images/team-3/si-model.jpeg" }
+    ]
+  }
+];
+
+let overallCounts = {};
+let categoryCounts = {};
+
+async function loadVotes() {
+  overallCounts = {"team-1":0,"team-2":0,"team-3":0};
+  categoryCounts = {};
+
+  const { data: overall } = await supabase.from("overall_votes").select("*");
+  overall.forEach(v => overallCounts[v.team_id]++);
+
+  const { data: cat } = await supabase.from("category_votes").select("*");
+  cat.forEach(v => {
+    if (!categoryCounts[v.category]) {
+      categoryCounts[v.category] = {"team-1":0,"team-2":0,"team-3":0};
+    }
+    categoryCounts[v.category][v.team_id]++;
+  });
+
+  render();
+}
+
+function voteOverall(teamId){
+  supabase.from("overall_votes").insert([{team_id:teamId}]);
+}
+
+function voteCategory(category, teamId){
+  supabase.from("category_votes").insert([{category, team_id:teamId}]);
+}
+
+function render(){
+  const container = document.getElementById("galleryGrid");
+  container.innerHTML = "";
+
+  teams.forEach(team => {
+    const div = document.createElement("div");
+    div.className = "team";
+
+    div.innerHTML += `<h2>${team.name}</h2>`;
+
+    div.innerHTML += `
+      <div class="vote-box">
+        <div><strong>Best Overall Team</strong></div>
+        <div class="small">${overallCounts[team.id] || 0} votes</div>
+        <button class="vote-btn" onclick="voteOverall('${team.id}')">Vote Overall</button>
       </div>
-    </div>
-  </header>
+    `;
 
-  <main class="container">
-    <section class="notice">
-      <strong>Important:</strong> this version is made for GitHub Pages and stores votes in the browser only.
-      It is perfect for previewing your galleries and letting each visitor pick a favorite on their own device,
-      but it does <em>not</em> collect one shared vote total across all visitors unless you connect a backend later.
-    </section>
-
-    <section class="gallery-grid" id="galleryGrid"></section>
-  </main>
-
-  <div class="modal hidden" id="galleryModal" aria-hidden="true">
-    <div class="modal-backdrop" id="modalBackdrop"></div>
-    <div class="modal-panel">
-      <button class="modal-close" id="closeModal" aria-label="Close">×</button>
-
-      <div class="modal-layout">
-        <div class="modal-images">
-          <img id="modalMainImage" class="modal-main-image" src="" alt="" />
-          <div class="thumb-grid" id="modalThumbGrid"></div>
-        </div>
-
-        <div class="modal-sidebar">
-          <p class="modal-label">Selected Portfolio</p>
-          <h2 id="modalTitle"></h2>
-          <p id="modalDescription" class="modal-description"></p>
-
-          <div class="vote-box">
-            <div class="vote-row">
-              <span>Votes</span>
-              <strong id="modalVotes">0</strong>
-            </div>
-            <div class="vote-row">
-              <span>Vote share</span>
-              <strong id="modalPercent">0%</strong>
-            </div>
-            <div class="progress">
-              <div class="progress-bar" id="modalProgress"></div>
-            </div>
+    team.roster.forEach(p => {
+      div.innerHTML += `
+        <div class="card">
+          <div class="category">${p.category}</div>
+          <img src="${p.image}">
+          <div class="info">
+            <strong>${p.celeb}</strong><br>
+            <span class="small">Peak year: ${p.year}</span><br><br>
+            <div class="small">${(categoryCounts[p.category]?.[team.id]) || 0} votes</div>
+            <button onclick="voteCategory('${p.category}','${team.id}')">Vote Category</button>
           </div>
-
-          <button class="primary-btn modal-vote-btn" id="modalVoteButton">Vote for this portfolio</button>
-          <p class="fine-print">
-            Replace the sample images in <code>script.js</code> with your own image URLs,
-            or point them to image files you upload into the repo.
-          </p>
         </div>
-      </div>
-    </div>
-  </div>
+      `;
+    });
 
-  <script src="script.js"></script>
+    container.appendChild(div);
+  });
+}
+
+function subscribe(){
+  supabase.channel("votes")
+    .on("postgres_changes",{event:"*",schema:"public",table:"overall_votes"},loadVotes)
+    .on("postgres_changes",{event:"*",schema:"public",table:"category_votes"},loadVotes)
+    .subscribe();
+}
+
+loadVotes();
+subscribe();
+</script>
+
 </body>
 </html>
