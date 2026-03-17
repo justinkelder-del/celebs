@@ -274,19 +274,6 @@ function renderTeams() {
       teamDiv.appendChild(card);
     });
 
-    const voteButton = document.createElement("button");
-    voteButton.textContent = "Vote for Team";
-    voteButton.style.width = "100%";
-    voteButton.style.padding = "12px";
-    voteButton.style.marginTop = "8px";
-    voteButton.style.border = "none";
-    voteButton.style.borderRadius = "12px";
-    voteButton.style.background = "#1d4ed8";
-    voteButton.style.color = "white";
-    voteButton.style.cursor = "pointer";
-    voteButton.style.fontWeight = "700";
-    voteButton.addEventListener("click", () => voteTeam(team.id, voteButton));
-
     const overallButton = document.createElement("button");
     overallButton.textContent = "Vote Best Overall";
     overallButton.style.width = "100%";
@@ -326,29 +313,6 @@ async function voteCategory(teamId, category, button) {
   } catch (error) {
     console.error("Category vote failed:", error);
     setStatus("Category vote failed.", true);
-    button.disabled = false;
-    button.textContent = originalText;
-  }
-}
-
-async function voteTeam(teamId, button) {
-  const originalText = button.textContent;
-  button.disabled = true;
-  button.textContent = "Submitting...";
-
-  try {
-    const { error } = await supabaseClient
-      .from("team_votes")
-      .insert([{ team_id: teamId, voter_id: voterId }]);
-
-    if (error) throw error;
-
-    teamVoteCounts[teamId] = (teamVoteCounts[teamId] || 0) + 1;
-    renderTeams();
-    setStatus("Team vote submitted.");
-  } catch (error) {
-    console.error("Team vote failed:", error);
-    setStatus("Team vote failed.", true);
     button.disabled = false;
     button.textContent = originalText;
   }
