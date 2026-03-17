@@ -187,33 +187,40 @@
   }
 
   async function voteOverall(teamId) {
-    clearError();
-    const payload = { voter_id: voterId, team_id: teamId };
+  clearError();
+  const payload = { voter_id: voterId, team_id: teamId };
 
-    const { error } = await supabase
-      .from("overall_votes")
-      .upsert(payload, { onConflict: "voter_id" });
+  const { error } = await supabase
+    .from("overall_votes")
+    .upsert(payload, { onConflict: "voter_id" });
 
-    if (error) {
-      console.error(error);
-      showError("Overall vote failed. Check that overall_votes has voter_id and a unique index on voter_id.");
-    }
+  if (error) {
+    console.error(error);
+    showError("Overall vote failed. Check that overall_votes has voter_id and a unique index on voter_id.");
+    return;
   }
+
+  await loadVotes();
+}
+
 
   async function voteCategory(category, teamId) {
-    clearError();
-    const payload = { voter_id: voterId, category, team_id: teamId };
+  clearError();
+  const payload = { voter_id: voterId, category, team_id: teamId };
 
-    const { error } = await supabase
-      .from("category_votes")
-      .upsert(payload, { onConflict: "category,voter_id" });
+  const { error } = await supabase
+    .from("category_votes")
+    .upsert(payload, { onConflict: "category,voter_id" });
 
-    if (error) {
-      console.error(error);
-      showError("Category vote failed. Check that category_votes has voter_id and a unique index on (category, voter_id).");
-    }
+  if (error) {
+    console.error(error);
+    showError("Category vote failed. Check that category_votes has voter_id and a unique index on (category, voter_id).");
+    return;
   }
 
+  await loadVotes();
+}
+  
   function renderPills() {
     $("overallTotalPill").textContent = `${sumTeamVotes(overallCounts)} overall votes`;
     const allCategoryVotes = categories.reduce((sum, category) => sum + sumTeamVotes(categoryCounts[category]), 0);
