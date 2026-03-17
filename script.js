@@ -53,7 +53,7 @@ const teams = [
 
 let overallVoteCounts = {};
 let categoryVoteCounts = {};
-let myCategoryVotes = {}; // key: category => teamId
+let myCategoryVotes = {};
 let myOverallVoteTeamId = null;
 
 const voterId = getOrCreateVoterId();
@@ -115,10 +115,16 @@ async function loadVotes() {
   setStatus("Loading votes...");
 
   try {
-    const overallRes = await supabaseClient.from("overall_votes").select("team_id");
+    const overallRes = await supabaseClient
+      .from("overall_votes")
+      .select("team_id");
+
     if (overallRes.error) throw overallRes.error;
 
-    const categoryRes = await supabaseClient.from("category_votes").select("team_id, category");
+    const categoryRes = await supabaseClient
+      .from("category_votes")
+      .select("team_id, category");
+
     if (categoryRes.error) throw categoryRes.error;
 
     const myOverallRes = await supabaseClient
@@ -126,12 +132,14 @@ async function loadVotes() {
       .select("team_id")
       .eq("voter_id", voterId)
       .maybeSingle();
+
     if (myOverallRes.error) throw myOverallRes.error;
 
     const myCategoryRes = await supabaseClient
       .from("category_votes")
       .select("team_id, category")
       .eq("voter_id", voterId);
+
     if (myCategoryRes.error) throw myCategoryRes.error;
 
     overallVoteCounts = {};
@@ -370,8 +378,7 @@ async function voteCategory(teamId, category, button) {
   button.textContent = "Submitting...";
 
   try {
-    const existingCategoryVote = myCategoryVotes[category];
-    if (existingCategoryVote) {
+    if (myCategoryVotes[category]) {
       setStatus("You already voted in that category.", true);
       renderTeams();
       return;
@@ -379,7 +386,7 @@ async function voteCategory(teamId, category, button) {
 
     const { error } = await supabaseClient
       .from("category_votes")
-      .insert([{ team_id: teamId, category: category, voter_id: voterId }]);
+      .insert([{ team_id: teamId, category, voter_id: voterId }]);
 
     if (error) throw error;
 
@@ -409,11 +416,11 @@ async function voteOverall(teamId, button) {
       return;
     }
 
-    const { error: insertError } = await supabaseClient
+    const { error } = await supabaseClient
       .from("overall_votes")
       .insert([{ team_id: teamId, voter_id: voterId }]);
 
-    if (insertError) throw insertError;
+    if (error) throw error;
 
     overallVoteCounts[teamId] = (overallVoteCounts[teamId] || 0) + 1;
     myOverallVoteTeamId = teamId;
